@@ -1,72 +1,69 @@
 /*
     MONUMENT CORE
-
-    Monument is the central controller.
-
-    Other modules:
-        Moonlight -> connection layer
-        Bob      -> database
-
-    Future modules:
-        Scribbles
-        Seek
-        Starlight
+    Central controller & module registry.
 */
 
 const Monument = {
 
-    version: "0.1.0",
-
+    version: "0.2.0",
     modules: {},
 
+    // Register module and mark it awake
     register(name, module) {
-        this.modules[name] = module;
+        this.modules[name] = {
+            instance: module,
+            awake: true,
+            registeredAt: Date.now()
+        };
 
-        console.log(`[Monument] Loaded: ${name}`);
+        console.log(`[Monument] Loaded & Awake: ${name.toUpperCase()}`);
     },
 
     get(name) {
-        return this.modules[name];
+        return this.modules[name] ? this.modules[name].instance : null;
     },
 
-    async search(query) {
-        if (!query.trim()) {
-            return [];
+    // Check if a module or DOORS entity is currently awake
+    isAwake(name) {
+        return !!(this.modules[name] && this.modules[name].awake);
+    },
+
+    // Get array of all active/awake module names
+    getAwakeModules() {
+        return Object.keys(this.modules).filter(key => this.modules[key].awake);
+    },
+
+    // Print summary status of all registered modules & entities
+    checkAwake() {
+        const report = {};
+        for (const [key, val] of Object.entries(this.modules)) {
+            report[key] = {
+                entity: val.instance.entityName || key,
+                awake: val.awake,
+                type: val.instance.type || "module"
+            };
         }
+        console.table(report);
+        return report;
+    },
 
-        const bob = this.get("bob");
-
-        if (!bob) {
-            console.warn("[Monument] Bob is offline.");
-            return [];
-        }
-
-        return await bob.search(query);
+    // Public APIs for console / external calls
+    api: {
+        ping: () => "Monument Core operational",
+        getVersion: () => Monument.version,
+        getAwakeCount: () => Monument.getAwakeModules().length,
+        getEntities: () => Monument.get("bob") ? Monument.get("bob").getEntities() : []
     }
 };
 
 
-/*
-    Search UI
-*/
-
+/* Non-working searchbar handler */
 const searchBox = document.getElementById("search");
-const results = document.getElementById("results");
-
-searchBox.addEventListener("input", async () => {
-
-    const query = searchBox.value;
-
-    const data = await Monument.search(query);
-
-    results.innerHTML = "";
-
-    for (const item of data) {
-
-        const result = document.createElement("div");
-
-        result.textContent = item.name;
-
-        results.appendChild(result);
-    }
-});
+if (searchBox) {
+    searchBox.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            console.log(`[Monument] Search is non-working. Input ignored: "${searchBox.value}"`);
+        }
+    });
+}
