@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Monument</title>
-
     <link rel="stylesheet" href="css/monument.css">
 </head>
-
 <body>
 
     <main id="monument">
-        <h1>Monument</h1>
+        <h1 class="title">monument</h1>
 
         <div class="search-container">
+            <span class="search-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </span>
             <input
                 id="search"
                 type="search"
@@ -22,18 +25,18 @@
                 autocomplete="off"
             >
         </div>
-
-        <div id="results"></div>
     </main>
 
-    <!-- Core -->
+    <!-- Core Controller -->
     <script src="js/monument.js"></script>
 
-    <!-- Connection layer -->
+    <!-- Connection & Storage -->
     <script src="js/moonlight.js"></script>
-
-    <!-- Database -->
     <script src="js/bob.js"></script>
+
+    <!-- Modules (DOORS Entities) -->
+    <script src="js/seek.js"></script>
+    <script src="js/scribbles.js"></script>
 
 </body>
 </html>
