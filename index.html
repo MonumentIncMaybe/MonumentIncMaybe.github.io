@@ -1,0 +1,273 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Monument</title>
+
+    <link rel="stylesheet" href="css/monument.css">
+</head>
+
+<body>
+
+    <main id="monument">
+        <h1>Monument</h1>
+
+        <div class="search-container">
+            <input
+                id="search"
+                type="search"
+                placeholder="Search Monument..."
+                autocomplete="off"
+            >
+        </div>
+
+        <div id="results"></div>
+    </main>
+
+    <!-- Core -->
+    <script src="js/monument.js"></script>
+
+    <!-- Connection layer -->
+    <script src="js/moonlight.js"></script>
+
+    <!-- Database -->
+    <script src="js/bob.js"></script>
+
+</body>
+</html>
+```
+
+### `css/monument.css`
+
+```css
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #222;
+
+    display: flex;
+    justify-content: center;
+}
+
+#monument {
+    width: min(700px, 90%);
+    padding-top: 18vh;
+}
+
+h1 {
+    margin: 0 0 20px;
+    text-align: center;
+
+    font-size: 42px;
+    font-weight: 600;
+}
+
+.search-container {
+    width: 100%;
+}
+
+#search {
+    width: 100%;
+    height: 46px;
+
+    padding: 0 16px;
+
+    border: 1px solid #bbb;
+    border-radius: 8px;
+
+    background: white;
+    color: #222;
+
+    font-size: 16px;
+    outline: none;
+}
+
+#search:focus {
+    border-color: #777;
+}
+
+#results {
+    margin-top: 15px;
+}
+```
+
+### `js/monument.js`
+
+```javascript
+/*
+    MONUMENT CORE
+
+    Monument is the central controller.
+
+    Other modules:
+        Moonlight -> connection layer
+        Bob      -> database
+
+    Future modules:
+        Scribbles
+        Seek
+        Starlight
+*/
+
+const Monument = {
+
+    version: "0.1.0",
+
+    modules: {},
+
+    register(name, module) {
+        this.modules[name] = module;
+
+        console.log(`[Monument] Loaded: ${name}`);
+    },
+
+    get(name) {
+        return this.modules[name];
+    },
+
+    async search(query) {
+        if (!query.trim()) {
+            return [];
+        }
+
+        const bob = this.get("bob");
+
+        if (!bob) {
+            console.warn("[Monument] Bob is offline.");
+            return [];
+        }
+
+        return await bob.search(query);
+    }
+};
+
+
+/*
+    Search UI
+*/
+
+const searchBox = document.getElementById("search");
+const results = document.getElementById("results");
+
+searchBox.addEventListener("input", async () => {
+
+    const query = searchBox.value;
+
+    const data = await Monument.search(query);
+
+    results.innerHTML = "";
+
+    for (const item of data) {
+
+        const result = document.createElement("div");
+
+        result.textContent = item.name;
+
+        results.appendChild(result);
+    }
+});
+```
+
+### `js/moonlight.js`
+
+```javascript
+/*
+    MOONLIGHT
+
+    v0.1:
+    Just a connection test.
+
+    Later this can become the thing responsible for:
+        - server connections
+        - authentication
+        - module communication
+        - API requests
+        - connection status
+*/
+
+const Moonlight = {
+
+    name: "Moonlight",
+
+    connected: false,
+
+    async connect() {
+
+        console.log("[Moonlight] Connecting...");
+
+        /*
+            Server connection will go here later.
+        */
+
+        this.connected = true;
+
+        console.log("[Moonlight] Connection established.");
+
+        return true;
+    }
+};
+
+Monument.register("moonlight", Moonlight);
+
+Moonlight.connect();
+```
+
+### `js/bob.js`
+
+```javascript
+/*
+    BOB
+
+    v0.1 temporary database.
+
+    This is deliberately local for now.
+    Later, Monument can ask Moonlight
+    to communicate with the real server.
+*/
+
+const Bob = {
+
+    name: "Bob",
+
+    data: [
+        {
+            name: "Monument",
+            type: "core"
+        },
+
+        {
+            name: "Moonlight",
+            type: "connection"
+        },
+
+        {
+            name: "Bob",
+            type: "database"
+        }
+    ],
+
+    async search(query) {
+
+        const text = query.toLowerCase();
+
+        return this.data.filter(item =>
+            item.name.toLowerCase().includes(text)
+        );
+    }
+};
+
+Monument.register("bob", Bob);
+```
