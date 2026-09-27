@@ -1,6 +1,6 @@
 /*
     MONUMENT
-    Core controller handling module registration and UI routing.
+    Core controller handling module registration, routing, and editable browser tabs.
 */
 
 const Monument = {
@@ -20,31 +20,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search');
     const seekBrowser = document.getElementById('seek-browser');
     const browserHomeBtn = document.getElementById('browser-home-btn');
-    const browserUrlDisplay = document.getElementById('browser-url-display');
+    const browserUrlInput = document.getElementById('browser-url-input');
     const browserViewContainer = document.getElementById('browser-view-container');
     const shortcuts = document.querySelectorAll('.shortcut-item');
 
-    // Handle search input execution
+    // Handle home screen search bar submission
     if (searchInput) {
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && searchInput.value.trim() !== '') {
                 const query = searchInput.value.trim();
-                
-                // Check if user typed an explicit seek protocol URL
                 if (query.startsWith('seek://')) {
                     navigateTo(query);
-                } else if (window.Seek) {
-                    // Dispatch through Seek API module
-                    const result = Seek.search(query);
-                    navigateTo(`seek://search?q=${encodeURIComponent(query)}`, result);
                 } else {
+                    if (window.Seek) {
+                        Seek.search(query);
+                    }
                     navigateTo(`seek://search?q=${encodeURIComponent(query)}`);
                 }
             }
         });
     }
 
-    // Handle shortcut button clicks
+    // Handle editable browser URL input submission inside the topbar
+    if (browserUrlInput) {
+        browserUrlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && browserUrlInput.value.trim() !== '') {
+                navigateTo(browserUrlInput.value.trim());
+            }
+        });
+    }
+
+    // Handle shortcut buttons (Icons only)
     shortcuts.forEach(shortcut => {
         shortcut.addEventListener('click', () => {
             const moduleName = shortcut.getAttribute('data-module');
@@ -52,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Home button takes you back to main Monument page
+    // Home button returns to Monument main view
     if (browserHomeBtn) {
         browserHomeBtn.addEventListener('click', () => {
             seekBrowser.classList.add('hidden');
@@ -60,45 +66,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function navigateTo(url, apiData = null) {
-        if (browserUrlDisplay) {
-            browserUrlDisplay.textContent = url;
+    // Route handler
+    function navigateTo(url) {
+        if (browserUrlInput) {
+            browserUrlInput.value = url;
         }
 
-        // Render views based on route
-        if (url === 'seek://about') {
+        // Exact route seek://about takes up the whole projected page area
+        if (url.trim() === 'seek://about') {
             browserViewContainer.innerHTML = `
-                <div class="browser-info-card">
-                    <h1>Seek Browser (v0.1.0)</h1>
-                    <p class="subtitle">What this browser will do:</p>
-                    <ul class="feature-list">
-                        <li><span>🌐</span> Execute modular queries and track search history using the SeekEngine API.</li>
-                        <li><span>⚡</span> Seamlessly bridge communication between Monument core, Starlight, and Scribbles entities.</li>
-                        <li><span>🔒</span> Provide an isolated, secure workspace window with custom protocol routing.</li>
-                    </ul>
-                </div>
-            `;
-        } else if (url.startsWith('seek://search')) {
-            const urlParams = new URLSearchParams(url.split('?')[1]);
-            const q = urlParams.get('q') || 'Unknown query';
-            
-            browserViewContainer.innerHTML = `
-                <div class="browser-info-card">
-                    <h1>Search Results</h1>
-                    <p class="query-echo">Query: "${q}"</p>
-                    <div class="api-response-box">
-                        <p><strong>Active Engine:</strong> ${apiData ? apiData.engine : 'SeekEngine'}</p>
-                        <p><strong>Status:</strong> ${apiData ? apiData.status : 'Dispatched'}</p>
-                        <p><strong>Tracking:</strong> ${apiData && apiData.tracking ? 'Active (Logged to Seek History)' : 'Idle'}</p>
+                <div class="about-fullpage">
+                    <div class="about-header">
+                        <h1>Seek Browser</h1>
+                        <span class="about-badge">v0.1.0</span>
+                    </div>
+                    <div class="about-grid">
+                        <div class="about-card">
+                            <h3>Search Routing</h3>
+                            <p>Processes queries through the internal SeekEngine API, dispatching commands and tracking local session history.</p>
+                        </div>
+                        <div class="about-card">
+                            <h3>Entity Bridge</h3>
+                            <p>Coordinates live interactions between Monument core, Starlight, and Scribbles modules in real time.</p>
+                        </div>
+                        <div class="about-card">
+                            <h3>Custom Protocols</h3>
+                            <p>Handles direct protocol navigation like <code>seek://</code> endpoints for modular web rendering and custom workspaces.</p>
+                        </div>
                     </div>
                 </div>
             `;
-        } else if (url.startsWith('seek://module/')) {
-            const modName = url.split('/')[3];
+        } else {
+            // Anything other than seek://about shows WIP
             browserViewContainer.innerHTML = `
-                <div class="browser-info-card">
-                    <h1>Module View: ${modName.toUpperCase()}</h1>
-                    <p>Loading internal entity workspace for <strong>${modName}</strong>...</p>
+                <div class="wip-fullpage">
+                    <h1>WIP</h1>
+                    <p>This path ("${url}") is currently under development.</p>
                 </div>
             `;
         }
@@ -106,6 +109,5 @@ document.addEventListener('DOMContentLoaded', () => {
         seekBrowser.classList.remove('hidden');
     }
 
-    // Open default seek://about on startup or allow direct interaction
     window.openSeekBrowser = navigateTo;
 });
