@@ -67,3 +67,20 @@ if (searchBox) {
         }
     });
 }
+
+/* Shortcut button click handlers */
+document.querySelectorAll(".shortcut-item").forEach(button => {
+    button.addEventListener("click", () => {
+        const moduleName = button.getAttribute("data-module");
+        const module = Monument.get(moduleName);
+
+        console.log(`[Monument] Shortcut triggered: ${moduleName}`);
+
+        if (module) {
+            if (typeof module.launchArcade === "function") module.launchArcade();
+            if (typeof module.openCommunity === "function") module.openCommunity();
+        } else {
+            console.warn(`[Monument] Module '${moduleName}' is not loaded or awake.`);
+        }
+    });
+});
