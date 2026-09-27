@@ -1,86 +1,40 @@
-/*
-    MONUMENT CORE
-    Central controller & module registry.
-*/
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search');
+    const seekBrowser = document.getElementById('seek-browser');
+    const browserHomeBtn = document.getElementById('browser-home-btn');
+    const browserUrlDisplay = document.getElementById('browser-url-display');
+    const shortcuts = document.querySelectorAll('.shortcut-item');
 
-const Monument = {
-
-    version: "0.1.0",
-    modules: {},
-
-    // Register module and mark it awake
-    register(name, module) {
-        this.modules[name] = {
-            instance: module,
-            awake: true,
-            registeredAt: Date.now()
-        };
-
-        console.log(`[Monument] Loaded & Awake: ${name.toUpperCase()}`);
-    },
-
-    get(name) {
-        return this.modules[name] ? this.modules[name].instance : null;
-    },
-
-    // Check if a module or DOORS entity is currently awake
-    isAwake(name) {
-        return !!(this.modules[name] && this.modules[name].awake);
-    },
-
-    // Get array of all active/awake module names
-    getAwakeModules() {
-        return Object.keys(this.modules).filter(key => this.modules[key].awake);
-    },
-
-    // Print summary status of all registered modules & entities
-    checkAwake() {
-        const report = {};
-        for (const [key, val] of Object.entries(this.modules)) {
-            report[key] = {
-                entity: val.instance.entityName || key,
-                awake: val.awake,
-                type: val.instance.type || "module"
-            };
-        }
-        console.table(report);
-        return report;
-    },
-
-    // Public APIs for console / external calls
-    api: {
-        ping: () => "Monument Core operational",
-        getVersion: () => Monument.version,
-        getAwakeCount: () => Monument.getAwakeModules().length,
-        getEntities: () => Monument.get("bob") ? Monument.get("bob").getEntities() : []
+    // Trigger Seek browser simulation when typing/pressing enter in the search input
+    if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && searchInput.value.trim() !== '') {
+                const query = searchInput.value.trim();
+                openSeekBrowser(`seek://search?q=${encodeURIComponent(query)}`);
+            }
+        });
     }
-};
 
-
-/* Non-working searchbar handler */
-const searchBox = document.getElementById("search");
-if (searchBox) {
-    searchBox.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            console.log(`[Monument] Search is non-working. Input ignored: "${searchBox.value}"`);
-        }
+    // Trigger Seek browser simulation when clicking shortcuts
+    shortcuts.forEach(shortcut => {
+        shortcut.addEventListener('click', () => {
+            const module = shortcut.getAttribute('data-module');
+            openSeekBrowser(`seek://module/${module}`);
+        });
     });
-}
 
-/* Shortcut button click handlers */
-document.querySelectorAll(".shortcut-item").forEach(button => {
-    button.addEventListener("click", () => {
-        const moduleName = button.getAttribute("data-module");
-        const module = Monument.get(moduleName);
+    // Home button takes you back to main Monument page and resets overlay
+    if (browserHomeBtn) {
+        browserHomeBtn.addEventListener('click', () => {
+            seekBrowser.classList.add('hidden');
+            if (searchInput) searchInput.value = '';
+        });
+    }
 
-        console.log(`[Monument] Shortcut triggered: ${moduleName}`);
-
-        if (module) {
-            if (typeof module.launchArcade === "function") module.launchArcade();
-            if (typeof module.openCommunity === "function") module.openCommunity();
-        } else {
-            console.warn(`[Monument] Module '${moduleName}' is not loaded or awake.`);
+    function openSeekBrowser(url) {
+        if (browserUrlDisplay) {
+            browserUrlDisplay.textContent = url;
         }
-    });
+        seekBrowser.classList.remove('hidden');
+    }
 });
