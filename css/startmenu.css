@@ -1,0 +1,104 @@
+/* startmenu.css - the Start menu panel (markup is built by js/core/startmenu.js) */
+
+#menu {
+  position: fixed;
+  left: 0;
+  bottom: 30px;
+  width: 384px;
+  height: 475px;
+  display: none;
+  z-index: 9;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 2px -2px 8px rgba(0,0,0,.45);
+  font: 11px XPTahoma,Tahoma,sans-serif;
+}
+
+#menu.show {
+  display: block;
+}
+
+#menu .bg {
+  position: absolute;
+  display: block;
+}
+
+#menu .it {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 6px;
+  cursor: default;
+  color: #000;
+  line-height: 1.15;
+}
+
+#menu .it img {
+  flex: none;
+}
+
+#menu .it b {
+  display: block;
+  font-weight: bold;
+}
+
+#menu .it small {
+  display: block;
+  color: #808080;
+  font-size: 11px;
+}
+
+#menu .l {
+  left: 2px;
+  width: 188px;
+}
+
+#menu .r {
+  left: 194px;
+  width: 186px;
+  color: #0a246a;
+  font-weight: bold;
+  height: 30px;
+}
+
+#menu .r img {
+  width: 24px;
+  height: 24px;
+}
+
+#menu .it:hover {
+  background: var(--xp-select, #316ac5);
+  color: #fff;
+}
+
+#menu .it:hover small {
+  color: #dde;
+}
+
+#menu #uname {
+  position: absolute;
+  left: 66px;
+  top: 14px;
+  font: bold 17px "Franklin Gothic Medium","Arial Narrow",Arial,sans-serif;
+  color: #fff;
+  text-shadow: 1px 1px 2px #0a2a7a;
+}
+
+#menu .fb {
+  position: absolute;
+  top: 442px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-size: 11px;
+  cursor: default;
+}
+
+#menu .fb:hover {
+  filter: brightness(1.15);
+}

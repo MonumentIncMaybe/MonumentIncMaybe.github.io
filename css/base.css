@@ -1,0 +1,60 @@
+/* base.css - page reset, fonts, desktop surface and desktop icons */
+
+@font-face {
+  font-family: 'XPTahoma';
+  src: url('../system/fonts/tahoma.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.dicon {
+  position: absolute;
+  left: 8px;
+  width: 76px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 1px 1px 1px #000;
+  font-size: 11px;
+  cursor: default;
+}
+
+.dicon img {
+  display: block;
+  margin: 0 auto 3px;
+}
+
+.dicon.sel span {
+  background: var(--xp-select, #316ac5);
+  outline: 1px dotted #fff;
+}
+
+:root {
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: inherit;
+}
+
+html,body {
+  margin: 0;
+  padding: 0;
+  font-family: 'XPTahoma',Tahoma,sans-serif;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
+}
+
+.dicon {
+  z-index: 0;
+}
+
+#desktop {
+  position: fixed;
+  inset: 0 0 30px 0;
+  background-image: url('../system/media/bliss.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

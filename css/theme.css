@@ -1,0 +1,15 @@
+/* theme.css - PLACEHOLDER for themes. Loaded last, so anything here overrides the other stylesheets.
+
+   A few colours are already exposed as CSS variables. Uncomment to change them:
+*/
+:root {
+  /* --xp-window-bg: #ece9d8;   window / toolbar / status-bar background (XP beige) */
+  /* --xp-select:    #316ac5;   selection + hover blue (start menu, desktop icon labels, menu bar) */
+}
+
+/* To make a whole theme (see css/themes/README.md and js/core/theme.js):
+   1. put images in system/themes/<name>/ and write css/themes/<name>.css that overrides the
+      image rules from taskbar.css and window.css (they all point into system/ui/)
+   2. XP.theme.register("<name>", { name: "My Theme", css: "css/themes/<name>.css" })
+   3. XP.theme.set("<name>")
+*/

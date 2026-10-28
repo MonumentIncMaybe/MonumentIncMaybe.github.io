@@ -1,0 +1,283 @@
+/* explorer.css - shared app chrome: menu bar, toolbar, address bar, status bar, panes, iframe page.
+   Used by My Computer, Internet Explorer and the default (fallback) app. */
+
+.mb {
+  display: flex;
+  align-items: center;
+  height: 21px;
+  padding: 0 2px;
+  background: var(--xp-window-bg, #ece9d8);
+  border-bottom: 1px solid #d6d2c2;
+  flex: none;
+}
+
+.mb span {
+  padding: 2px 7px;
+}
+
+.mb span:hover {
+  background: var(--xp-select, #316ac5);
+  color: #fff;
+}
+
+.mb img {
+  margin-left: auto;
+  height: 20px;
+}
+
+.tbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 38px;
+  padding: 0 4px;
+  background: linear-gradient(#f6f4ec,var(--xp-window-bg, #ece9d8));
+  border-bottom: 1px solid #d6d2c2;
+  flex: none;
+}
+
+.tbn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #000;
+}
+
+.tbn:hover {
+  border-color: #aaa;
+  background: #f3f1ea;
+}
+
+.tbn.dis {
+  color: #8a8a82;
+}
+
+.tbn svg,.tbn img {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.tbn.sm svg,.tbn.sm img {
+  width: 20px;
+  height: 20px;
+}
+
+.tsep {
+  width: 1px;
+  height: 28px;
+  background: #c9c5b3;
+  margin: 0 3px;
+}
+
+.abar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 4px;
+  background: var(--xp-window-bg, #ece9d8);
+  border-bottom: 1px solid #d6d2c2;
+  flex: none;
+  color: #7b7b73;
+}
+
+.abar .inp {
+  flex: 1;
+  height: 20px;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  gap: 4px;
+  color: #000;
+}
+
+.abar .inp input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  font: 11px XPTahoma,Tahoma,sans-serif;
+  background: none;
+  user-select: text;
+  min-width: 0;
+}
+
+.abar .inp img {
+  width: 16px;
+  height: 16px;
+}
+
+.go {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #000;
+}
+
+.go i {
+  width: 17px;
+  height: 17px;
+  border-radius: 3px;
+  background: linear-gradient(#55c74a,#1d8c18);
+  display: inline-block;
+  position: relative;
+}
+
+.go i::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  border: 4px solid transparent;
+  border-left: 7px solid #fff;
+}
+
+.pg {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  margin: 0;
+}
+
+.sbar {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  background: var(--xp-window-bg, #ece9d8);
+  border-top: 1px solid #d6d2c2;
+  flex: none;
+  padding: 0 4px;
+  gap: 6px;
+}
+
+.sbar .sp {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 150px;
+  border-left: 1px solid #c9c5b3;
+  padding-left: 6px;
+  height: 16px;
+}
+
+.mcbody {
+  flex: 1;
+  display: flex;
+  background: #fff;
+  min-height: 0;
+}
+
+.pane {
+  width: 190px;
+  flex: none;
+  background: linear-gradient(#7ba2e7,#6375d6);
+  padding: 10px;
+  overflow: auto;
+}
+
+.pbox {
+  background: #d6dff7;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.pbox h4 {
+  margin: 0;
+  padding: 5px 8px;
+  background: linear-gradient(90deg,#fff,#c6d3f7);
+  color: #215dc6;
+  font-size: 11px;
+}
+
+.pbox div {
+  padding: 6px 10px;
+  color: #215dc6;
+}
+
+.pbox div:hover {
+  text-decoration: underline;
+}
+
+.list {
+  flex: 1;
+  padding: 10px 14px;
+  overflow: auto;
+}
+
+.list h4 {
+  margin: 6px 0 8px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #70bfff;
+  color: #0c327d;
+  font-size: 11px;
+}
+
+.ent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 22px 14px 0;
+  width: 200px;
+  vertical-align: top;
+}
+
+.ent:hover {
+  background: #e5eefb;
+}
+
+.ent img {
+  width: 32px;
+  height: 32px;
+}
+
+.ent small {
+  display: block;
+  color: #808080;
+}
+
+.pg {
+  position: relative;
+  overflow: hidden;
+}
+
+.pg iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.win.inactive .pg iframe {
+  pointer-events: none;
+}
+
+/* Reusable XP push button for apps (same look as the Messenger buttons). */
+.xp-btn {
+  min-width: 75px;
+  height: 23px;
+  padding: 0 8px;
+  border: 1px solid #003c74;
+  border-radius: 3px;
+  background: linear-gradient(#fff, var(--xp-window-bg, #ece9d8) 85%, #d6d0c5);
+  color: #000;
+  cursor: default;
+  font: 11px XPTahoma, Tahoma, sans-serif;
+}
+
+.xp-btn:hover {
+  box-shadow: inset 0 0 0 2px #f8b330;
+}
+
+.xp-btn:active {
+  background: #e3e0d3;
+}

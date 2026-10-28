@@ -1,0 +1,284 @@
+/* window.css - window frame: caption, borders, caption buttons, resize handles */
+
+.win {
+  position: absolute;
+  box-sizing: border-box;
+  min-width: 140px;
+  min-height: 60px;
+  font: 11px XPTahoma,Tahoma,sans-serif;
+  color: #000;
+}
+
+.win * {
+  box-sizing: border-box;
+}
+
+.win .cap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 29px;
+  border: solid transparent;
+  border-width: 9px 35px 17px 28px;
+  border-image: url(../system/ui/cap.png) 9 35 17 28 fill stretch;
+}
+
+.win.inactive .cap {
+  border-image-source: url(../system/ui/cap-inactive.png);
+}
+
+.win.max .cap {
+  border-image-source: url(../system/ui/cap-max.png);
+}
+
+.win.max.inactive .cap {
+  border-image-source: url(../system/ui/cap-max-inactive.png);
+}
+
+.win .wi {
+  position: absolute;
+  left: 6px;
+  top: 7px;
+  width: 16px;
+  height: 16px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.win .wt {
+  position: absolute;
+  left: 26px;
+  right: 80px;
+  top: 0;
+  height: 29px;
+  line-height: 29px;
+  z-index: 2;
+  color: #fff;
+  font: bold 13px "Trebuchet MS",Tahoma,sans-serif;
+  text-shadow: 1px 1px 0 #0a1883;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.win.inactive .wt {
+  color: #d8e4f8;
+  text-shadow: none;
+}
+
+.win .capdrag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 29px;
+  z-index: 3;
+}
+
+.win .fl,.win .fr {
+  position: absolute;
+  top: 29px;
+  bottom: 5px;
+  width: 5px;
+  background-size: 100% 100%;
+}
+
+.win .fl {
+  left: 0;
+  background-image: url(../system/ui/frame-left.png);
+}
+
+.win .fr {
+  right: 0;
+  background-image: url(../system/ui/frame-right.png);
+}
+
+.win.inactive .fl {
+  background-image: url(../system/ui/frame-left-inactive.png);
+}
+
+.win.inactive .fr {
+  background-image: url(../system/ui/frame-right-inactive.png);
+}
+
+.win .fb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  border: solid transparent;
+  border-width: 2px 5px;
+  border-image: url(../system/ui/frame-bottom.png) 2 5 2 5 fill stretch;
+}
+
+.win.inactive .fb {
+  border-image-source: url(../system/ui/frame-bottom-inactive.png);
+}
+
+.win.max .fl,.win.max .fr,.win.max .fb {
+  display: none;
+}
+
+.win .cl {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 29px;
+  bottom: 5px;
+  background: var(--xp-window-bg, #ece9d8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.win.max .cl {
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.win .cb {
+  position: absolute;
+  top: 5px;
+  width: 21px;
+  height: 21px;
+  z-index: 4;
+  background: url(../system/ui/btn.png) 0 0;
+  cursor: default;
+}
+
+.win .cb.x {
+  right: 6px;
+  background-image: url(../system/ui/btn-close.png);
+}
+
+.win .cb.mx {
+  right: 30px;
+}
+
+.win .cb.mn {
+  right: 54px;
+}
+
+.win.max .cb {
+  top: 5px;
+}
+
+.win .cb::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 13px;
+  height: 13px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+}
+
+.win .cb.x::after {
+  background-image: url(../system/ui/glyph-close.png);
+}
+
+.win .cb.mx::after {
+  background-image: url(../system/ui/glyph-max.png);
+}
+
+.win.max .cb.mx::after {
+  background-image: url(../system/ui/glyph-restore.png);
+}
+
+.win .cb.mn::after {
+  background-image: url(../system/ui/glyph-min.png);
+}
+
+.win .cb:hover {
+  background-position: 0 -21px;
+}
+
+.win .cb:active {
+  background-position: 0 -42px;
+}
+
+.win.inactive .cb {
+  background-position: 0 -84px;
+}
+
+.win.inactive .cb:hover {
+  background-position: 0 -105px;
+}
+
+.win .rz {
+  position: absolute;
+  z-index: 5;
+}
+
+.win.max .rz {
+  display: none;
+}
+
+.rz[data-d=n] {
+  left: 6px;
+  right: 6px;
+  top: -2px;
+  height: 5px;
+  cursor: n-resize;
+}
+
+.rz[data-d=s] {
+  left: 6px;
+  right: 6px;
+  bottom: -2px;
+  height: 5px;
+  cursor: s-resize;
+}
+
+.rz[data-d=e] {
+  top: 6px;
+  bottom: 6px;
+  right: -2px;
+  width: 5px;
+  cursor: e-resize;
+}
+
+.rz[data-d=w] {
+  top: 6px;
+  bottom: 6px;
+  left: -2px;
+  width: 5px;
+  cursor: w-resize;
+}
+
+.rz[data-d=ne] {
+  right: -2px;
+  top: -2px;
+  width: 9px;
+  height: 9px;
+  cursor: ne-resize;
+}
+
+.rz[data-d=nw] {
+  left: -2px;
+  top: -2px;
+  width: 9px;
+  height: 9px;
+  cursor: nw-resize;
+}
+
+.rz[data-d=se] {
+  right: -2px;
+  bottom: -2px;
+  width: 9px;
+  height: 9px;
+  cursor: se-resize;
+}
+
+.rz[data-d=sw] {
+  left: -2px;
+  bottom: -2px;
+  width: 9px;
+  height: 9px;
+  cursor: sw-resize;
+}

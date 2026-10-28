@@ -1,0 +1,134 @@
+/* taskbar.css - start button, task buttons and the system tray */
+
+#taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30px;
+  display: flex;
+  align-items: stretch;
+  z-index: 10;
+  background: url(../system/ui/taskbar.png) repeat-x 0 0/auto 100%;
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+
+#start {
+  width: 99px;
+  height: 30px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: url(../system/ui/start.png) 0 0/100% 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 10px;
+  color: #fff;
+  font: italic bold 18px "Trebuchet MS",Tahoma,sans-serif;
+  text-shadow: 1px 1px 2px #1b4d12;
+}
+
+#start:hover {
+  background-image: url(../system/ui/start-hover.png);
+}
+
+#start:active,#start.on {
+  background-image: url(../system/ui/start-active.png);
+}
+
+#flag {
+  width: auto;
+  height: 18px;
+}
+
+#logo {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  grid-template: 1fr 1fr/1fr 1fr;
+  gap: 1px;
+  transform: skewX(-6deg) rotate(-4deg);
+}
+
+#logo i:nth-child(1) {
+  background: #f35325;
+}
+
+#logo i:nth-child(2) {
+  background: #81bc06;
+}
+
+#logo i:nth-child(3) {
+  background: #05a6f0;
+}
+
+#logo i:nth-child(4) {
+  background: #ffba08;
+}
+
+#tasks {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.task {
+  height: 23px;
+  width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+  border: 3px solid transparent;
+  border-image: url(../system/ui/task.png) 3 3 3 3 fill/3px 3px 3px 3px stretch;
+}
+
+.task:hover {
+  border-image-source: url(../system/ui/task-hover.png);
+}
+
+.task.active {
+  border-image-source: url(../system/ui/task-active.png);
+}
+
+.task img {
+  width: 16px;
+  height: 16px;
+}
+
+#tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 14px;
+  color: #fff;
+  background: url(../system/ui/tray.png) 0 0/100% 100% no-repeat;
+  min-width: 90px;
+  justify-content: flex-end;
+}
+
+#tray .ico {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #dfe9f7;
+  opacity: .85;
+}
+
+#tasks .task {
+  flex: 0 1 160px;
+  min-width: 0;
+  cursor: default;
+}
+
+#tasks .task span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
