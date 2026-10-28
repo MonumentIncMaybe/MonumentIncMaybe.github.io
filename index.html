@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Windows XP Desktop</title>
+
+  <!-- Shell styles (the look of the desktop, taskbar, windows). Per-app CSS is loaded by the app itself. -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/taskbar.css">
+  <link rel="stylesheet" href="css/startmenu.css">
+  <link rel="stylesheet" href="css/window.css">
+  <link rel="stylesheet" href="css/explorer.css">
+  <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <div id="desktop"></div>   <!-- desktop icons + windows are added by js/core -->
+  <div id="menu"></div>      <!-- Start menu, built by js/core/startmenu.js -->
+
+  <audio id="startup-sound" src="system/media/Startup.mp3" preload="auto"></audio>
+
+  <div id="taskbar">
+    <button id="start"><img id="flag" src="system/ui/flag.png" alt="">start </button>
+    <div id="tasks"></div>
+    <div id="tray"><span class="ico"></span><span class="ico"></span><span id="clock"></span></div>
+  </div>
+
+  <!-- Everything else is loaded in order by boot.js: config -> core -> apps -->
+  <script src="js/boot.js"></script>
+</body>
+</html>
