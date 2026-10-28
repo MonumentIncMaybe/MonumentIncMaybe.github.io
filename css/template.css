@@ -1,0 +1,36 @@
+/* template.css - styles for js/apps/_template.js. Keep app styles under their own class prefix. */
+.tpl {
+  flex: 1;
+  padding: 12px 16px;
+  overflow: auto;
+  background: #fff;
+  user-select: text;
+}
+
+.tpl h3 {
+  margin: 0 0 6px;
+  color: #0c327d;
+  font-size: 14px;
+}
+
+.tpl p {
+  margin: 0 0 12px;
+  color: #444;
+}
+
+.tpl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tpl-out {
+  margin: 10px 0 0;
+  padding: 8px;
+  min-height: 90px;
+  white-space: pre-wrap;
+  background: #f6f4ec;
+  border: 1px solid #7f9db9;
+  font: 11px Consolas, monospace;
+}

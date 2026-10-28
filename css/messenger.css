@@ -1,0 +1,321 @@
+/* messenger.css - Windows Messenger (loaded by js/apps/messenger.js) */
+
+.ms {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+
+.ms[hidden],.ms [hidden] {
+  display: none!important;
+}
+
+.ms select,.ms input,.ms textarea,.ms button {
+  font: 11px XPTahoma,Tahoma,sans-serif;
+}
+
+.ms-in {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 22px;
+  gap: 6px;
+  background: linear-gradient(#fff,#e4ecfb);
+  color: #000;
+}
+
+.ms-in img {
+  width: 100px;
+  height: 80px;
+}
+
+.ms-in h3 {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: #1c4a9b;
+}
+
+.ms-in label {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ms-in input[type=text],.ms-in input[type=password] {
+  border: 1px solid #7f9db9;
+  padding: 3px;
+  user-select: text;
+}
+
+.ms-in .chk {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.msb {
+  min-width: 75px;
+  height: 23px;
+  border: 1px solid #003c74;
+  border-radius: 3px;
+  background: linear-gradient(#fff,var(--xp-window-bg, #ece9d8) 85%,#d6d0c5);
+  color: #000;
+  cursor: default;
+}
+
+.msb:hover {
+  box-shadow: inset 0 0 0 2px #f8b330;
+}
+
+.msb:active {
+  background: #e3e0d3;
+}
+
+.ms-hd {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: linear-gradient(#fff,#d5e2fa);
+  border-bottom: 1px solid #9db4dc;
+}
+
+.ms-hd img {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #6b8fc9;
+  background: #fff;
+}
+
+.ms-hd b {
+  display: block;
+  font-size: 12px;
+  color: #0c327d;
+}
+
+.ms-hd small {
+  color: #555;
+}
+
+.ms-hd select {
+  margin-top: 2px;
+  max-width: 150px;
+}
+
+.ms-ls {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 6px;
+  user-select: none;
+}
+
+.ms-ls h5 {
+  margin: 6px 0 2px;
+  font-size: 11px;
+  color: #0c327d;
+  cursor: default;
+}
+
+.ms-ls h5::before {
+  content: "\25BE ";
+  color: #6b8fc9;
+}
+
+.ct {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 12px;
+  height: 20px;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ct:hover {
+  background: #e5eefb;
+}
+
+.ct.sel {
+  background: var(--xp-select, #316ac5);
+  color: #fff;
+}
+
+.ct small {
+  color: #808080;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ct.sel small {
+  color: #dbe6ff;
+}
+
+.ct.off span {
+  color: #808080;
+}
+
+.ct.sel.off span {
+  color: #fff;
+}
+
+.st {
+  flex: none;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: url(../../system/msn/status.png) 0 0 no-repeat;
+}
+
+.st.off {
+  filter: grayscale(1);
+  opacity: .55;
+}
+
+.ms-ft {
+  padding: 4px 8px;
+  background: var(--xp-window-bg, #ece9d8);
+  border-top: 1px solid #d6d2c2;
+  color: #444;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ch {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ch-to {
+  padding: 4px 8px;
+  background: #fff;
+  border-bottom: 1px solid #d6d2c2;
+  flex: none;
+}
+
+.ch-bd {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  min-height: 0;
+  background: var(--xp-window-bg, #ece9d8);
+}
+
+.ch-l {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ch-r {
+  width: 70px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ch-r img {
+  width: 66px;
+  height: 66px;
+  object-fit: cover;
+  border: 1px solid #6b8fc9;
+  background: #fff;
+}
+
+.ch-tx {
+  flex: 1;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  padding: 5px 7px;
+  user-select: text;
+  line-height: 15px;
+  word-wrap: break-word;
+}
+
+.ch-tx p {
+  margin: 0 0 4px;
+}
+
+.ch-tx .sys {
+  color: #808080;
+  font-style: italic;
+}
+
+.ch-tx .who {
+  color: #808080;
+}
+
+.ch-tx .me .who {
+  color: #0c327d;
+}
+
+.ch-em {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+
+.ch-em i {
+  cursor: default;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 1px;
+}
+
+.ch-em i:hover {
+  border-color: #aaa;
+  background: #f3f1ea;
+}
+
+.em {
+  display: inline-block;
+  width: 19px;
+  height: 19px;
+  vertical-align: -5px;
+  background: url(../../system/msn/emoticons.png) 0 0 no-repeat;
+}
+
+.ch-em .em {
+  vertical-align: top;
+}
+
+.ch-in {
+  display: flex;
+  gap: 6px;
+  height: 56px;
+  flex: none;
+}
+
+.ch-in textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid #7f9db9;
+  padding: 3px;
+  user-select: text;
+}
+
+.ch-in .msb {
+  align-self: stretch;
+  min-width: 60px;
+  height: auto;
+}
+
+.ch-st {
+  height: 18px;
+  padding: 2px 8px;
+  color: #444;
+  background: var(--xp-window-bg, #ece9d8);
+  border-top: 1px solid #d6d2c2;
+  flex: none;
+}
