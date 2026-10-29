@@ -6,8 +6,9 @@
   // Add or edit track filenames here as you add audio files to system/media/musictemp/
   const DEFAULT_PLAYLIST = [
     { title: "Windows XP Startup", src: "system/media/Startup.mp3" },
-    { title: "Sample Track 1", src: "system/media/musictemp/song1.mp3" },
-    { title: "Sample Track 2", src: "system/media/musictemp/song2.mp3" }
+    { title: "Velkommen", src: "system/media/musictemp/Velkommen.mp3" },
+    { title: "SugarPlum", src: "system/media/musictemp/Plum.mp3" },
+    { title: "Stars", src: "system/media/musictemp/Stars.mp3" }
   ];
 
   function formatTime(seconds) {
