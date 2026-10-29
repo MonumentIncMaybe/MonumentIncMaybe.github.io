@@ -22,8 +22,7 @@ XP.settings = {
     "ie",
     "messenger",
     "custom",
-    "_template"
-    // , "_template"
+    "template"
   ],
 
   /* Remember wallpaper / theme choices between visits (localStorage). */
