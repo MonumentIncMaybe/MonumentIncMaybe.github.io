@@ -22,6 +22,7 @@ XP.settings = {
     "ie",
     "messenger",
     "custom",
+    "wmp",
     "template"
   ],
 
