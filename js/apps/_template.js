@@ -98,7 +98,6 @@
 
     /* ---------- 4. onClose: clean up timers / listeners you created ---------- */
     onClose(win) {
-      /* nothing to clean up here */
     }
   });
 
