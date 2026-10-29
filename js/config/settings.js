@@ -21,7 +21,8 @@ XP.settings = {
     "mycomputer",
     "ie",
     "messenger",
-    "custom"
+    "custom",
+    "_template"
     // , "_template"
   ],
 
