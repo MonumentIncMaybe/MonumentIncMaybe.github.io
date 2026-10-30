@@ -1,0 +1,203 @@
+/* login.css - the Windows XP "Welcome" screen, log-off / shut-down screens. Built by js/core/login.js. */
+
+#login {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: none;
+  flex-direction: column;
+  background: #5a7edc;
+  color: #fff;
+  font: 13px XPTahoma, Tahoma, sans-serif;
+  user-select: none;
+  cursor: default;
+  transition: opacity .45s;
+}
+
+#login.show { display: flex; }
+#login.fade { opacity: 0; pointer-events: none; }
+
+#login .lg-top {
+  flex: none;
+  height: 78px;
+  background: linear-gradient(#00309c, #00309c 60%, #0a3fb8);
+}
+
+#login .lg-bot {
+  flex: none;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: linear-gradient(#00309c, #003399);
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, #00309c 0%, #f0a548 50%, #00309c 100%) 1;
+}
+
+#login .lg-mid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 18% 55%, rgba(255, 255, 255, .18), transparent 55%),
+    linear-gradient(90deg, #5a7edc 0%, #5a7edc 100%);
+}
+
+#login .lg-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-right: 46px;
+  text-align: right;
+}
+
+#login .lg-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#login .lg-logo img { height: 92px; filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, .35)); }
+
+#login .lg-logo b {
+  font: italic bold 46px "Trebuchet MS", Tahoma, sans-serif;
+  letter-spacing: -1px;
+  text-shadow: 2px 3px 3px rgba(0, 20, 90, .6);
+  line-height: 1;
+}
+
+#login .lg-logo b sup { font-size: 17px; vertical-align: top; margin-left: 2px; }
+#login .lg-logo b em { color: #ff8a1a; font-size: 34px; font-style: italic; }
+
+#login .lg-begin {
+  margin-top: 16px;
+  font-size: 18px;
+  text-shadow: 1px 1px 2px rgba(0, 20, 90, .6);
+}
+
+#login .lg-divider {
+  flex: none;
+  width: 2px;
+  align-self: stretch;
+  margin: 28px 0;
+  background: linear-gradient(transparent, #fff 18%, #fff 82%, transparent);
+  opacity: .75;
+}
+
+#login .lg-right {
+  flex: 1;
+  padding-left: 46px;
+}
+
+#login .lg-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 10px;
+  width: max-content;
+  min-width: 280px;
+  border: 1px solid transparent;
+}
+
+#login .lg-user:hover, #login .lg-user.open {
+  background: linear-gradient(90deg, #2a4fc0, #4a72dc 70%, rgba(90, 126, 220, 0));
+  border-color: rgba(255, 255, 255, .25);
+}
+
+#login .lg-av {
+  width: 66px;
+  height: 66px;
+  border-radius: 6px;
+  border: 3px solid #e6ecf9;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 20, 90, .35);
+  object-fit: cover;
+  flex: none;
+}
+
+#login .lg-user .nm { font-size: 22px; text-shadow: 1px 1px 2px rgba(0, 20, 90, .5); }
+#login .lg-user small { display: block; font-size: 12px; opacity: .9; margin-top: 2px; }
+
+#login .lg-pw { display: none; margin-top: 10px; }
+#login .lg-user.open .lg-pw { display: block; }
+
+#login .lg-pw .row { display: flex; align-items: center; gap: 6px; }
+
+#login .lg-pw input {
+  width: 168px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid #00309c;
+  border-radius: 3px;
+  font: 13px XPTahoma, Tahoma, sans-serif;
+  outline: 0;
+}
+
+#login .lg-go {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  background: linear-gradient(#6fcf5a, #2e9a1e);
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+}
+
+#login .lg-go::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  border: 6px solid transparent;
+  border-left: 9px solid #fff;
+  border-right: 0;
+}
+
+#login .lg-err { min-height: 16px; margin-top: 6px; font-size: 12px; color: #ffe27a; text-shadow: 1px 1px 1px rgba(0,0,0,.4); }
+#login .lg-user.shake .lg-pw { animation: lgshake .3s; }
+@keyframes lgshake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+#login .lg-off {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+#login .lg-off img {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid #fff;
+  background: #d9421c;
+  padding: 2px;
+}
+
+#login .lg-off:hover { text-decoration: underline; }
+#login .lg-note { max-width: 360px; font-size: 12px; line-height: 1.35; opacity: .95; }
+
+/* "Welcome", "Logging off...", "Windows is shutting down" and the powered-off screen reuse the same bars. */
+#login .lg-msg {
+  display: none;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  font: italic 40px "Trebuchet MS", Tahoma, sans-serif;
+  text-shadow: 2px 3px 3px rgba(0, 20, 90, .6);
+}
+
+#login.msg .lg-left, #login.msg .lg-divider, #login.msg .lg-right { display: none; }
+#login.msg .lg-msg { display: flex; }
+#login.msg .lg-off, #login.msg .lg-note { visibility: hidden; }
+
+#login.off { background: #000; }
+#login.off .lg-top, #login.off .lg-bot { display: none; }
+#login.off .lg-mid { background: #000; }
+#login.off .lg-msg { font: 14px XPTahoma, Tahoma, sans-serif; color: #888; text-shadow: none; }

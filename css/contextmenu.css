@@ -1,0 +1,80 @@
+/* contextmenu.css - the classic XP popup menu (right-click menus, IE menu-bar drop-downs, submenus).
+   Markup is built by js/core/contextmenu.js. */
+
+.xpm {
+  position: fixed;
+  z-index: 30000;
+  min-width: 140px;
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #aca899;
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, .4);
+  font: 11px XPTahoma, Tahoma, sans-serif;
+  color: #000;
+  user-select: none;
+  cursor: default;
+}
+
+.xpm .mi {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 22px 0 26px;
+  white-space: nowrap;
+}
+
+.xpm .mi > img {
+  position: absolute;
+  left: 5px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+}
+
+.xpm .mi.chk::before {
+  content: "\2713";
+  position: absolute;
+  left: 8px;
+  font-weight: bold;
+}
+
+.xpm .mi.bold {
+  font-weight: bold;
+}
+
+.xpm .mi .key {
+  margin-left: auto;
+  padding-left: 24px;
+  color: inherit;
+}
+
+.xpm .mi.sub::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  top: 7px;
+  border: 4px solid transparent;
+  border-left: 5px solid currentColor;
+  border-right: 0;
+}
+
+.xpm .mi.on:not(.dis) {
+  background: var(--xp-select, #316ac5);
+  color: #fff;
+}
+
+.xpm .mi.dis {
+  color: #aca899;
+}
+
+.xpm .mi.dis > img {
+  opacity: .4;
+  filter: grayscale(1);
+}
+
+.xpm .msep {
+  height: 1px;
+  margin: 3px 2px 3px 24px;
+  background: #aca899;
+}
