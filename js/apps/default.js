@@ -4,7 +4,7 @@
  * opens this: an empty explorer-style window titled from js/config/shell.js.
  * Edit this file to change what every "not built yet" app looks like.
  *
- * To give one of them a real app, create js/apps/<id>.js (copy _template.js) and add <id> to
+ * To give one of them a real app, create js/apps/<id>.js (copy template.js) and add <id> to
  * XP.settings.apps in js/config/settings.js.
  */
 (function () {

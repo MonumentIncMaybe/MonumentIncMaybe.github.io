@@ -1,6 +1,27 @@
 /* messenger.js - Windows Messenger (id "msg") and its conversation windows (id "chat").
  * Contacts, sign-in and chat replies are all placeholders: nothing is sent anywhere.
  * To make the contact list / replies real, change the CT / REPLY arrays below.
+ *
+ * ==============================================================================================
+ * MSN MESSENGER DATABASE - PLACEHOLDER (replaces the fake contacts and canned replies)
+ *
+ * Today: CT (contacts) and REPLY (pre-written answers) are hard-coded, and nobody is really typing.
+ * To make it real you need a backend + database; the page can't store other people's messages.
+ *
+ * 1. DATABASE (SQLite / Postgres / Firebase / Supabase - anything), suggested tables:
+ *      users     (id, email, display_name, avatar_url, password_hash, status, status_message, last_seen)
+ *      contacts  (owner_id, contact_id, created_at)                      -- the buddy list
+ *      messages  (id, from_id, to_id, body, sent_at, delivered_at)       -- offline messages wait here
+ * 2. API / realtime (WebSocket or Server-Sent Events, e.g. wss://your-server/messenger):
+ *      POST /login          {email, password}  -> session cookie / token   (sign-in button, see main())
+ *      GET  /contacts       -> [{name, status, message}]                    (replaces CT)
+ *      WS   "presence"      -> pushes status changes -> call paint()        (online / away / offline)
+ *      WS   "message"       -> {from, body} -> add("", from, body)          (replaces REPLY + setTimeout)
+ *      POST /messages       {to, body}  <- called from send() in chat()     (replaces the canned reply)
+ * 3. Then delete REPLY, load CT from GET /contacts inside main(), and keep everything else
+ *    (windows, emoticons, status icons) exactly as it is.
+ * Never put database credentials or secret keys in this file - it is public. Keep them on the server.
+ * ==============================================================================================
  */
 (function () {
   const MS=(()=>{
@@ -25,7 +46,7 @@
         ft.firstChild.textContent=on.length+" contacts online";
         $(".ms-hd b").innerHTML=`${E(NAME())} <small>(${ST[mine][0]})</small>`};
       const show=on=>{signed=on;inV.hidden=on;hd.hidden=ft.hidden=ls.hidden=!on;if(on){sel.value=mine;paint()}};
-      $(".ms-in .msb").onclick=()=>{const b=$(".ms-in .msb");b.disabled=!0;b.textContent="Signing in...";setTimeout(()=>{b.disabled=!1;b.textContent="Sign In";show(!0)},900)};
+      /* DB-PLACEHOLDER: call POST /login here, then GET /contacts, before show(!0) */$(".ms-in .msb").onclick=()=>{const b=$(".ms-in .msb");b.disabled=!0;b.textContent="Signing in...";setTimeout(()=>{b.disabled=!1;b.textContent="Sign In";show(!0)},900)};
       sel.onchange=()=>{if(sel.value==="out")return show(!1);mine=sel.value;paint()};
       ls.onclick=e=>{const c=e.target.closest(".ct");if(!c)return;ls.querySelectorAll(".ct.sel").forEach(x=>x.classList.remove("sel"));c.classList.add("sel")};
       ls.ondblclick=e=>{const c=e.target.closest(".ct");if(c)chatWith(c.dataset.n)};
@@ -41,7 +62,7 @@
       if(c[1]==="off")Q(el,".cp").style.filter="grayscale(1)";
       const add=(cls,who,t)=>{const p=document.createElement("p");p.className=cls;p.innerHTML=who?`<span class="who">${E(who)} says:</span><br>&nbsp;${fmt(t)}`:E(t);tx.appendChild(p);tx.scrollTop=tx.scrollHeight};
       add("sys","",c[1]==="off"?`${n} appears offline. Messages here are placeholders only.`:"Placeholder chat: replies are pre-written and nothing is sent anywhere.");
-      const send=()=>{const t=ta.value.trim();if(!t)return;ta.value="";add("me",NAME(),t);stt.textContent="Last message sent at "+now()+".";
+      /* DB-PLACEHOLDER: POST /messages {to:n, body:t} here; incoming replies arrive over the WebSocket instead of REPLY */const send=()=>{const t=ta.value.trim();if(!t)return;ta.value="";add("me",NAME(),t);stt.textContent="Last message sent at "+now()+".";
         if(c[1]==="off"){add("sys","",`${n} is offline and will receive your message the next time they sign in (placeholder).`);return}
         clearTimeout(w.tm);setTimeout(()=>stt.textContent=n+" is typing a message.",500);
         w.tm=setTimeout(()=>{if(!el.isConnected)return;add("",n,REPLY[Math.random()*REPLY.length|0]);stt.textContent="Last message received at "+now()+"."},1600+Math.random()*1400)};
