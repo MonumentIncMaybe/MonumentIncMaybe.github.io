@@ -36,13 +36,16 @@
   const CORE = [
     "js/core/util.js",         // XP.$, XP.esc, XP.storage
     "js/core/icons.js",        // XP.icons
+    "js/core/filestore.js",    // XP.files  (IndexedDB store for uploaded backgrounds)
     "js/core/theme.js",        // XP.theme  (wallpaper + theme changer API)
     "js/core/apps.js",         // XP.apps   (app registry / API)
     "js/core/explorer.js",     // XP.ui     (shared menu bar / toolbar / address bar markup)
     "js/core/windows.js",      // XP.windows, XP.open
     "js/core/startmenu.js",    // XP.startMenu
     "js/core/desktop.js",      // XP.desktop (icons, selection, clock, start button)
-    "js/core/shell.js"         // XP.start()
+    "js/core/shell.js",        // XP.start()
+    "js/core/contextmenu.js",  // XP.contextMenu (right-click menus)
+    "js/core/login.js"         // XP.login (Welcome screen, Log Off, Turn Off)
   ];
 
   seq(CONFIG)
