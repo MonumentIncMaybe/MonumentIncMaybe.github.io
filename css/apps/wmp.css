@@ -1,0 +1,99 @@
+/* wmp.css - Windows Media Player 9 look (js/apps/wmp.js). Everything is prefixed .wm-
+ * The buttons, panels, sliders and album art are the real WMP 9 bitmaps from wmploc.dll,
+ * saved as PNGs in system/wmp/ (magenta transparency key already removed). */
+
+.wm { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #000; color: #fff; font: 12px XPTahoma, Tahoma, sans-serif; position: relative; outline: 0; }
+.wm-body { flex: 1; display: flex; min-height: 0; }
+
+/* ---------- left task list (Now Playing, Media Guide ...) ---------- */
+.wm-nav { position: relative; width: 132px; flex: none; color: #000; background: url(../../system/wmp/nav-bg.png) 0 0 / 100% 100% no-repeat; border-right: 1px solid #8aa0d6; overflow: hidden; }
+.wm-nav::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 9px; background: url(../../system/wmp/nav-edge.png) 0 0 / 100% 100%; pointer-events: none; }
+.wm-nav .it { position: relative; display: flex; align-items: center; min-height: 30px; padding: 3px 18px 3px 8px; font: bold 12px Verdana, XPTahoma, Tahoma, sans-serif; line-height: 1.15; border-bottom: 1px solid rgba(110, 130, 190, .45); }
+.wm-nav .it:hover { background: rgba(255, 255, 255, .55); }
+.wm-nav .it.on { background: linear-gradient(#dfe5f5, #b9c4e2); }
+.wm-nav .it.on::after, .wm-nav .it.sub::after { content: ""; position: absolute; right: 7px; top: 50%; margin-top: -4px; border: 4px solid transparent; border-left: 5px solid #000; border-right: 0; }
+.wm-nav .foot { position: absolute; left: 0; bottom: 0; width: 144px; height: 43px; background: url(../../system/wmp/nav-foot.png) 0 0 no-repeat; pointer-events: none; }
+
+/* ---------- centre: title, visualization, info strip ---------- */
+.wm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #000; }
+.wm-head { flex: none; height: 38px; padding: 4px 6px 0; font: 24px XPTahoma, Tahoma, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wm-vis { flex: 1; min-height: 0; position: relative; margin: 0 3px; background: #031a0b; }
+.wm-vis canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.wm-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: #9fd8a8; padding: 0 20px; line-height: 1.4; }
+.wm-empty img { width: 48px; height: 48px; }
+.wm.drag .wm-vis { outline: 2px dashed #ffb83a; outline-offset: -4px; }
+
+.wm-info { flex: none; display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 6px; background: #000; white-space: nowrap; }
+.wm-info .wm-vn { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.wm-vb { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #8a93b8; background: linear-gradient(#5b6a9c, #2a335c); position: relative; padding: 0; }
+.wm-vb::after { content: ""; position: absolute; top: 3px; border: 4px solid transparent; }
+.wm-vb.l::after { left: 2px; border-right: 6px solid #e6ecff; border-left: 0; }
+.wm-vb.r::after { left: 4px; border-left: 6px solid #e6ecff; border-right: 0; }
+.wm-vb:hover { border-color: #fff; }
+.wm-tg { height: 18px; padding: 0 7px; border: 1px solid #5b6a9c; background: #1a2347; color: #cfd8ff; font: 11px XPTahoma, Tahoma, sans-serif; }
+.wm-tg:hover { border-color: #fff; }
+.wm-tg.on { background: #4660b4; color: #fff; border-color: #ffd77a; }
+
+/* ---------- right panel: art + playlist ---------- */
+.wm-side { width: 196px; flex: none; display: flex; flex-direction: column; background: #3f58ac; border-left: 1px solid #1c2c70; }
+.wm-find { flex: none; height: 38px; line-height: 38px; text-align: center; background: #5a76c6; color: #fff; font-size: 13px; border-bottom: 1px solid #2c428e; }
+.wm-find:hover { background: #6a86d6; }
+.wm-art { flex: none; width: 150px; height: 150px; margin: 8px auto; background: url(../../system/wmp/art-note.png) center / cover no-repeat; border: 1px solid #1c2c70; }
+.wm-pl { flex: 1; overflow-y: auto; margin: 0; padding: 0; list-style: none; border-top: 1px solid #2c428e; }
+.wm-pl li { display: flex; gap: 6px; padding: 2px 6px; height: 20px; align-items: center; white-space: nowrap; color: #fff; }
+.wm-pl li span.n { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.wm-pl li:hover { background: rgba(255, 255, 255, .12); }
+.wm-pl li.sel { background: rgba(0, 0, 0, .35); }
+.wm-pl li.cur { background: #000; color: #b6ff7a; }
+.wm-foot { flex: none; display: flex; justify-content: space-between; align-items: center; height: 26px; padding: 0 8px; background: #000; }
+.wm-foot a { color: #9fb8ee; text-decoration: underline; cursor: default; }
+.wm-foot a:hover { color: #fff; }
+
+/* ---------- bottom control panel: real WMP 9 panel bitmaps + real buttons ---------- */
+.wm-bar { position: relative; flex: none; height: 74px; background: url(../../system/wmp/panel-left.png) 0 0 no-repeat, url(../../system/wmp/panel-tile.png) 0 0 repeat-x; }
+.wm-bar > * { position: absolute; }
+.wm-song { left: 10px; right: 10px; top: 0; height: 18px; display: flex; align-items: center; gap: 6px; color: #8be08b; font: 12px XPTahoma, Tahoma, sans-serif; white-space: nowrap; }
+.wm-song .tri { width: 0; height: 0; border: 5px solid transparent; border-left: 8px solid #3ad03a; border-right: 0; }
+.wm-song .wm-st { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+.wm-btn { padding: 0; border: 0; background-color: transparent; background-repeat: no-repeat; background-position: 0 0; cursor: default; }
+.wm-btn:focus { outline: 0; }
+.wm-play { left: 33px; top: 39px; width: 29px; height: 29px; background-image: url(../../system/wmp/play-0.png); }
+.wm-play:hover { background-image: url(../../system/wmp/play-1.png); }
+.wm-play:active { background-image: url(../../system/wmp/play-2.png); }
+.wm-play.is-pause { background-image: url(../../system/wmp/pause-0.png); }
+.wm-play.is-pause:hover { background-image: url(../../system/wmp/pause-1.png); }
+.wm-play.is-pause:active { background-image: url(../../system/wmp/pause-2.png); }
+.wm-stop { left: 68px; top: 42px; width: 20px; height: 27px; background-image: url(../../system/wmp/stop-0.png); }
+.wm-stop:hover { background-image: url(../../system/wmp/stop-1.png); }
+.wm-stop:active { background-image: url(../../system/wmp/stop-2.png); }
+.wm-stop:disabled { background-image: url(../../system/wmp/stop-3.png); }
+.wm-prev { left: 106px; top: 42px; width: 20px; height: 20px; background-image: url(../../system/wmp/prev-0.png); }
+.wm-prev:hover { background-image: url(../../system/wmp/prev-1.png); }
+.wm-prev:active { background-image: url(../../system/wmp/prev-2.png); }
+.wm-prev:disabled { background-image: url(../../system/wmp/prev-3.png); }
+.wm-next { left: 131px; top: 42px; width: 20px; height: 20px; background-image: url(../../system/wmp/next-0.png); }
+.wm-next:hover { background-image: url(../../system/wmp/next-1.png); }
+.wm-next:active { background-image: url(../../system/wmp/next-2.png); }
+.wm-next:disabled { background-image: url(../../system/wmp/next-3.png); }
+.wm-mute { left: 168px; top: 42px; width: 20px; height: 20px; background-image: url(../../system/wmp/mute-0.png); }
+.wm-mute:hover { background-image: url(../../system/wmp/mute-1.png); }
+.wm-mute:active, .wm-mute.on { background-image: url(../../system/wmp/mute-2.png); }
+.wm-rew { left: 6px; top: 19px; width: 28px; height: 15px; background-image: url(../../system/wmp/rew-0.png); }
+.wm-rew:hover { background-image: url(../../system/wmp/rew-1.png); }
+.wm-rew:active { background-image: url(../../system/wmp/rew-2.png); }
+.wm-ffwd { right: 6px; top: 19px; width: 28px; height: 15px; background-image: url(../../system/wmp/ffwd-0.png); }
+.wm-ffwd:hover { background-image: url(../../system/wmp/ffwd-1.png); }
+.wm-ffwd:active { background-image: url(../../system/wmp/ffwd-2.png); }
+
+.wm-seek, .wm-vol { -webkit-appearance: none; appearance: none; margin: 0; padding: 0; background-color: transparent; background-repeat: no-repeat; outline: 0; border: 0; }
+.wm-seek { left: 38px; right: 38px; top: 20px; height: 12px; background-image: url(../../system/wmp/seek-track.png); background-size: 100% 100%; }
+.wm-vol { left: 203px; top: 44px; width: 60px; height: 20px; background-image: url(../../system/wmp/vol-track.png); }
+.wm-seek::-webkit-slider-runnable-track, .wm-vol::-webkit-slider-runnable-track { background: transparent; border: 0; height: 100%; }
+.wm-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 17px; height: 12px; background: url(../../system/wmp/seek-thumb-0.png) no-repeat; border: 0; }
+.wm-seek:active::-webkit-slider-thumb { background-image: url(../../system/wmp/seek-thumb-1.png); }
+.wm-vol::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 20px; background: url(../../system/wmp/vol-thumb-0.png) no-repeat; border: 0; }
+.wm-vol:active::-webkit-slider-thumb { background-image: url(../../system/wmp/vol-thumb-1.png); }
+.wm-seek::-moz-range-track, .wm-vol::-moz-range-track { background: transparent; height: 100%; }
+.wm-seek::-moz-range-thumb { width: 17px; height: 12px; background: url(../../system/wmp/seek-thumb-0.png) no-repeat; border: 0; border-radius: 0; }
+.wm-vol::-moz-range-thumb { width: 9px; height: 20px; background: url(../../system/wmp/vol-thumb-0.png) no-repeat; border: 0; border-radius: 0; }
