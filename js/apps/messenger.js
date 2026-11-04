@@ -1,3 +1,9 @@
+(function () {
+  const SUPABASE_URL      = "https://tlrhtmjqwtvxhotqfkih.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_Oa2-wClTjbdHTucXZo0vuA_qAuuHCd4";
+  const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
+  const LIVE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+  
 const SB = (() => {
   let sb = null,
     user = null,
