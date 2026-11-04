@@ -2,7 +2,7 @@
 window.XP = window.XP || {};
 
 XP.settings = {
-  userName: "Owner",                       // start menu header + Messenger + "Owner's Documents"
+  userName: "King Owner",                       // start menu header + Messenger + "Owner's Documents"
   userPicture: "system/ui/menu-avatar.jpg",
 
   /* Desktop background. mode: "cover" | "center" | "stretch" | "tile".
@@ -14,7 +14,7 @@ XP.settings = {
   /* Login screen shown at start-up and after Start > Log Off.
      This is a look-and-feel gate only: the password is readable by anyone who opens DevTools.
      Set enabled:false to boot straight to the desktop. See js/core/login.js for a server-side note. */
-  login: { enabled: true, password: "1234" },
+  login: { enabled: true, password: "123456" },
 
   /* Desktop icons, top to bottom. Any app registered with `desktop: true` is appended after these. */
   desktop: ["mc", "rb"],
