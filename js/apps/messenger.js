@@ -1,99 +1,5 @@
 /* messenger.js - Windows Messenger (id "msg") and its conversation windows (id "chat"), backed by SUPABASE.
  *
- * ==============================================================================================
- * HOW TO SET UP SUPABASE  (about 5 minutes, free tier is enough)
- * ==============================================================================================
- * Until you fill in the two constants below, Messenger stays in OFFLINE DEMO MODE (fake contacts and
- * canned replies, nothing is sent anywhere). Once you fill them in it is a real multi-user messenger:
- * everyone who creates an account shows up in everyone else's buddy list, online/offline comes from
- * Supabase Realtime Presence, and chats are stored in a table.
- *
- * 1. Go to https://supabase.com -> New project. Wait for it to finish creating.
- *
- * 2. Project Settings -> API. Copy:
- *       "Project URL"                       -> SUPABASE_URL      below
- *       "anon" / "public" key (NOT service_role!) -> SUPABASE_ANON_KEY below
- *    The anon key is meant to be public (it is safe in this file and on GitHub Pages) ONLY because the
- *    Row Level Security policies in step 4 protect your data. NEVER paste the service_role key here.
- *
- * 3. Authentication -> Providers -> make sure "Email" is enabled.
- *    For quick testing also turn OFF "Confirm email" (Authentication -> Sign In / Providers -> Email),
- *    otherwise new accounts must click a link in their inbox before they can sign in.
- *
- * 4. SQL Editor -> New query -> paste everything between the lines below -> Run:
- *
- *    ---------------------------------------------------------------------------------------
- *    create table public.profiles (
- *      id           uuid primary key references auth.users(id) on delete cascade,
- *      display_name text not null,
- *      created_at   timestamptz not null default now()
- *    );
- *
- *    create table public.messages (
- *      id         bigint generated always as identity primary key,
- *      from_id    uuid not null references public.profiles(id) on delete cascade,
- *      to_id      uuid not null references public.profiles(id) on delete cascade,
- *      body       text not null check (char_length(body) between 1 and 2000),
- *      created_at timestamptz not null default now()
- *    );
- *    create index on public.messages (to_id, created_at);
- *    create index on public.messages (from_id, created_at);
- *
- *    alter table public.profiles enable row level security;
- *    alter table public.messages enable row level security;
- *
- *    -- everybody signed in can see the buddy list; you can only create/edit your own profile
- *    create policy "profiles: read"   on public.profiles for select to authenticated using (true);
- *    create policy "profiles: insert" on public.profiles for insert to authenticated with check (id = auth.uid());
- *    create policy "profiles: update" on public.profiles for update to authenticated
- *      using (id = auth.uid()) with check (id = auth.uid());
- *
- *    -- you can only read messages you sent or received, and only send as yourself
- *    create policy "messages: read" on public.messages for select to authenticated
- *      using (from_id = auth.uid() or to_id = auth.uid());
- *    create policy "messages: send" on public.messages for insert to authenticated
- *      with check (from_id = auth.uid());
- *
- *    -- lets new messages be pushed live to the other person's browser
- *    alter publication supabase_realtime add table public.messages;
- *    ---------------------------------------------------------------------------------------
- *
- * 5. Paste the URL and anon key into the two constants below, reload the page, open Windows Messenger,
- *    click "Get a new account" and create 2+ accounts (use a second browser / private window to be the
- *    second person). Double-click a name in the buddy list to chat.
- *
- * 6. Hosting on GitHub Pages / any site: Authentication -> URL Configuration -> set "Site URL" to your
- *    page address (only matters if you keep email confirmation on).
- *
- * Notes
- *  - "Online" = that browser has Messenger signed in right now (Presence). Everybody else is "Not Online".
- *    Their messages still wait in the table and show up in the conversation history when you open it.
- *  - Everyone who signs up is on everybody's list (no friend requests). To make it private/invite-only,
- *    add a `contacts (owner_id, contact_id)` table and filter loadProfiles() below by it.
- *  - The Supabase browser library is loaded from the jsDelivr CDN the first time it is needed.
- * ==============================================================================================
- */
-(function () {
-  const SUPABASE_URL      = "https://tlrhtmjqwtvxhotqfkih.supabase.co";   // e.g. "https://abcdefghijklmnop.supabase.co"
-  const SUPABASE_ANON_KEY = "sb_publishable_Oa2-wClTjbdHTucXZo0vuA_qAuuHCd4";   // the long "anon" / "public" key (never the service_role key)
-
-  const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
-  const LIVE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-
-  /* ---------------------------------------------------------------------------------------------
-   * BACKENDS. Both expose the same small interface, so the window code below doesn't care which
-   * one is active:
-   *   restore()                 -> user | null        an existing session (page reload)
-   *   signIn(email, pw)         -> user               user = { id, name, email }
-   *   signUp(email, pw, name)   -> user
-   *   start(user, emit)         begin presence/realtime; emit.contacts(list) / emit.message(msg)
-   *   setStatus(status)         "online" | "busy" | "brb" | "away" | "off"
-   *   history(contactId)        -> [{ mine, body, at }]
-   *   send(contactId, body)     -> promise
-   *   stop()                    sign out / unsubscribe
-   * contact = { id, name, status, msg }
-   * ------------------------------------------------------------------------------------------- */
-
   /* ---------- Supabase ---------- */
   const SB = (() => {
     let sb = null, user = null, presence = null, inbox = null, profiles = [], tried = {}, me = { status: "online" };
@@ -305,13 +211,30 @@
         login(() => (mode === "up" ? B.signUp(email, pw, name) : B.signIn(email, pw)));
       };
 
-      sel.onchange = () => {
-        if (sel.value === "out") {
-          B.stop(); me = null; contacts = []; mine = "online";
-          chats.clear(); show(false); return;
-        }
-        mine = sel.value; B.setStatus(mine); paint();
-      };
+      /* Sign out: stop Supabase (presence + realtime + session), clear state, show the sign-in screen. */
+const signOut = () => {
+  B.stop();
+  me = null; contacts = []; mine = "online";
+  chats.clear();
+  show(false);
+};
+
+/* The status dropdown's "Sign Out" entry uses the same function. */
+sel.onchange = () => {
+  if (sel.value === "out") return signOut();
+  mine = sel.value; B.setStatus(mine); paint();
+};
+
+/* File menu: File > Sign Out / Close */
+el.querySelectorAll(".mb span").forEach(sp => sp.addEventListener("click", e => {
+  if (sp.textContent.trim() !== "File") return;
+  e.stopPropagation();
+  XP.contextMenu.showAt(sp, [
+    { label: "Sign Out", disabled: !signed(), action: signOut },
+    "-",
+    { label: "Close", action: () => w.close() }
+  ]);
+}));
       ls.onclick = e => { const c = e.target.closest(".ct"); if (!c) return; ls.querySelectorAll(".ct.sel").forEach(x => x.classList.remove("sel")); c.classList.add("sel"); };
       ls.ondblclick = e => { const c = e.target.closest(".ct"); if (c) chatWith(c.dataset.n); };
 
