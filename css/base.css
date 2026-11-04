@@ -40,6 +40,7 @@ html,body {
   margin: 0;
   padding: 0;
   font-family: 'XPTahoma',Tahoma,sans-serif;
+  font-size: 11px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -57,4 +58,22 @@ html,body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* Form controls (buttons, inputs, selects, textareas) do NOT inherit the page font by default - the
+   browser gives them its own (Arial / system-ui). That is why parts of the UI looked "default".
+   One rule here makes every control reuse XPTahoma; any rule with its own `font:` still wins. */
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Keep Tahoma crisp like the original (no synthetic bold/italic smearing on controls). */
+body {
+  -webkit-font-smoothing: auto;
+  text-rendering: optimizeSpeed;
 }
