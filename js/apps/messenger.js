@@ -1,657 +1,476 @@
+/* messenger.js - Windows Messenger (id "msg") and its conversation windows (id "chat"), backed by SUPABASE.
+ *
+ * ==============================================================================================
+ * HOW TO SET UP SUPABASE  (about 5 minutes, free tier is enough)
+ * ==============================================================================================
+ * Until you fill in the two constants below, Messenger stays in OFFLINE DEMO MODE (fake contacts and
+ * canned replies, nothing is sent anywhere). Once you fill them in it is a real multi-user messenger:
+ * everyone who creates an account shows up in everyone else's buddy list, online/offline comes from
+ * Supabase Realtime Presence, and chats are stored in a table.
+ *
+ * 1. Go to https://supabase.com -> New project. Wait for it to finish creating.
+ *
+ * 2. Project Settings -> API. Copy:
+ *       "Project URL"                       -> SUPABASE_URL      below
+ *       "anon" / "public" key (NOT service_role!) -> SUPABASE_ANON_KEY below
+ *    The anon key is meant to be public (it is safe in this file and on GitHub Pages) ONLY because the
+ *    Row Level Security policies in step 4 protect your data. NEVER paste the service_role key here.
+ *
+ * 3. Authentication -> Providers -> make sure "Email" is enabled.
+ *    For quick testing also turn OFF "Confirm email" (Authentication -> Sign In / Providers -> Email),
+ *    otherwise new accounts must click a link in their inbox before they can sign in.
+ *
+ * 4. SQL Editor -> New query -> paste everything between the lines below -> Run:
+ *
+ *    ---------------------------------------------------------------------------------------
+ *    create table public.profiles (
+ *      id           uuid primary key references auth.users(id) on delete cascade,
+ *      display_name text not null,
+ *      created_at   timestamptz not null default now()
+ *    );
+ *
+ *    create table public.messages (
+ *      id         bigint generated always as identity primary key,
+ *      from_id    uuid not null references public.profiles(id) on delete cascade,
+ *      to_id      uuid not null references public.profiles(id) on delete cascade,
+ *      body       text not null check (char_length(body) between 1 and 2000),
+ *      created_at timestamptz not null default now()
+ *    );
+ *    create index on public.messages (to_id, created_at);
+ *    create index on public.messages (from_id, created_at);
+ *
+ *    alter table public.profiles enable row level security;
+ *    alter table public.messages enable row level security;
+ *
+ *    -- everybody signed in can see the buddy list; you can only create/edit your own profile
+ *    create policy "profiles: read"   on public.profiles for select to authenticated using (true);
+ *    create policy "profiles: insert" on public.profiles for insert to authenticated with check (id = auth.uid());
+ *    create policy "profiles: update" on public.profiles for update to authenticated
+ *      using (id = auth.uid()) with check (id = auth.uid());
+ *
+ *    -- you can only read messages you sent or received, and only send as yourself
+ *    create policy "messages: read" on public.messages for select to authenticated
+ *      using (from_id = auth.uid() or to_id = auth.uid());
+ *    create policy "messages: send" on public.messages for insert to authenticated
+ *      with check (from_id = auth.uid());
+ *
+ *    -- lets new messages be pushed live to the other person's browser
+ *    alter publication supabase_realtime add table public.messages;
+ *    ---------------------------------------------------------------------------------------
+ *
+ * 5. Paste the URL and anon key into the two constants below, reload the page, open Windows Messenger,
+ *    click "Get a new account" and create 2+ accounts (use a second browser / private window to be the
+ *    second person). Double-click a name in the buddy list to chat.
+ *
+ * 6. Hosting on GitHub Pages / any site: Authentication -> URL Configuration -> set "Site URL" to your
+ *    page address (only matters if you keep email confirmation on).
+ *
+ * Notes
+ *  - "Online" = that browser has Messenger signed in right now (Presence). Everybody else is "Not Online".
+ *    Their messages still wait in the table and show up in the conversation history when you open it.
+ *  - Everyone who signs up is on everybody's list (no friend requests). To make it private/invite-only,
+ *    add a `contacts (owner_id, contact_id)` table and filter loadProfiles() below by it.
+ *  - The Supabase browser library is loaded from the jsDelivr CDN the first time it is needed.
+ * ==============================================================================================
+ */
 (function () {
-  const SUPABASE_URL      = "https://tlrhtmjqwtvxhotqfkih.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_Oa2-wClTjbdHTucXZo0vuA_qAuuHCd4";
+  const SUPABASE_URL      = "https://tlrhtmjqwtvxhotqfkih.supabase.co";   // e.g. "https://abcdefghijklmnop.supabase.co"
+  const SUPABASE_ANON_KEY = "sb_publishable_Oa2-wClTjbdHTucXZo0vuA_qAuuHCd4";   // the long "anon" / "public" key (never the service_role key)
+
   const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
   const LIVE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-  
-const SB = (() => {
-  let sb = null,
-    user = null,
-    presence = null,
-    inbox = null,
-    profiles = [],
-    tried = {},
-    me = { status: "online" };
+  const AUTO = "msn.auto", MAIL = "msn.email";    // XP.storage keys: "sign me in automatically", last e-mail
 
-  const client = async () => {
-    if (sb) return sb;
-    if (!window.supabase) await XP.loadScript(SUPABASE_JS);
-    if (!window.supabase) {
-      throw new Error("Could not load the Supabase library. Check your internet connection.");
-    }
-    return (sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-  };
+  /* ---------------------------------------------------------------------------------------------
+   * BACKENDS. Both expose the same small interface, so the window code below doesn't care which
+   * one is active:
+   *   restore()                 -> user | null        a saved session (page reload)
+   *   signIn(email, pw)         -> user               user = { id, name, email }
+   *   signUp(email, pw, name)   -> user
+   *   start(user, emit)         begin presence/realtime. emit.contacts(list) / emit.message(msg) / emit.signedOut()
+   *   setStatus(status)         "online" | "busy" | "brb" | "away" | "off"
+   *   history(contactId)        -> [{ id, mine, body }]
+   *   send(contactId, body)     -> promise
+   *   stop()                    unsubscribe + sign out
+   * contact = { id, name, status, msg }      message = { id?, from, body }
+   * ------------------------------------------------------------------------------------------- */
 
-  const toUser = (u) => ({
-    id: u.id,
-    email: u.email || "",
-    name: (u.user_metadata && u.user_metadata.display_name) || (u.email || "user").split("@")[0],
-  });
+  /* ---------- Supabase ---------- */
+  const SB = (() => {
+    let sb = null, user = null, presence = null, inbox = null, authSub = null, profiles = [], tried = {}, me = { status: "online" };
 
-  const fail = (e) => {
-    if (e) throw new Error(e.message || String(e));
-  };
+    /* The library is only downloaded when it is actually needed. */
+    const client = async () => {
+      if (sb) return sb;
+      if (!window.supabase) await XP.loadScript(SUPABASE_JS);
+      if (!window.supabase) throw new Error("Could not load the Supabase library. Check your internet connection.");
+      return (sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    };
+    const saved = () => { try { return Object.keys(localStorage).some(k => /^sb-.+-auth-token$/.test(k)); } catch (e) { return false; } };
+    const toUser = u => ({
+      id: u.id,
+      email: u.email || "",
+      name: (u.user_metadata && u.user_metadata.display_name) || (u.email || "user").split("@")[0]
+    });
+    const fail = e => { if (e) throw new Error(e.message || String(e)); };
 
-  /* The buddy list = every profile except mine. (Filter here for private contact lists.) */
-  const loadProfiles = async () => {
-    const r = await sb
-      .from("profiles")
-      .select("id,display_name")
-      .neq("id", user.id)
-      .order("display_name");
-    if (!r.error) profiles = r.data || [];
-  };
+    /* The buddy list = every profile except mine. (Filter here for private contact lists.) */
+    const loadProfiles = async () => {
+      const r = await sb.from("profiles").select("id,display_name").neq("id", user.id).order("display_name");
+      if (!r.error) profiles = r.data || [];
+    };
 
-  return {
-    demo: false,
+    return {
+      demo: false,
 
-    async restore() {
-      try {
+      async restore() {
+        if (!saved()) return null;                    // nothing stored -> don't even download the library
+        try {
+          await client();
+          const r = await sb.auth.getSession();
+          return r.data && r.data.session ? toUser(r.data.session.user) : null;
+        } catch (e) { return null; }
+      },
+
+      async signIn(email, pw) {
         await client();
-        const r = await sb.auth.getSession();
-        return r.data && r.data.session ? toUser(r.data.session.user) : null;
-      } catch (e) {
-        return null;
+        const r = await sb.auth.signInWithPassword({ email, password: pw });
+        fail(r.error);
+        return toUser(r.data.user);
+      },
+
+      async signUp(email, pw, name) {
+        await client();
+        const r = await sb.auth.signUp({ email, password: pw, options: { data: { display_name: name } } });
+        fail(r.error);
+        if (!r.data.session) {
+          const e = new Error("Account created. Check your e-mail to confirm it, then sign in.");
+          e.info = true;                              // not an error: the UI shows it in green
+          throw e;
+        }
+        return toUser(r.data.user);
+      },
+
+      async start(u, emit) {
+        await client();
+        user = u; tried = {}; me = { status: "online" };
+        fail((await sb.from("profiles").upsert({ id: u.id, display_name: u.name })).error);
+        await loadProfiles();
+
+        /* Presence: who has Messenger open right now, and with what status. */
+        const push = () => {
+          if (!presence || user !== u) return;        // signed out meanwhile: ignore late events
+          const st = presence.presenceState();
+          const unknown = Object.keys(st).find(k => k !== u.id && !tried[k] && !profiles.some(p => p.id === k));
+          if (unknown) { tried[unknown] = 1; loadProfiles().then(push); return; }   // someone just signed up
+          emit.contacts(profiles.map(p => {
+            const m = st[p.id] && st[p.id][0], on = m && m.status !== "off";
+            return { id: p.id, name: p.display_name, status: on ? m.status : "off", msg: "" };
+          }));
+        };
+        presence = sb.channel("xp-messenger", { config: { presence: { key: u.id } } });
+        presence.on("presence", { event: "sync" }, push)
+                .subscribe(s => { if (s === "SUBSCRIBED" && presence) presence.track(me); });
+        push();
+
+        /* New messages addressed to me, pushed live (needs the `alter publication` line from step 4). */
+        inbox = sb.channel("xp-inbox-" + u.id)
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "to_id=eq." + u.id },
+              p => emit.message({ id: p.new.id, from: p.new.from_id, body: p.new.body }))
+          .subscribe();
+
+        /* Session ended elsewhere (other tab, expired / revoked token) -> sign out here too. */
+        authSub = sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT" && user === u) emit.signedOut(); }).data.subscription;
+      },
+
+      setStatus(s) { me = { status: s }; if (presence) presence.track(me); },
+
+      async history(id) {
+        const r = await sb.from("messages").select("id,from_id,body")
+          .or(`and(from_id.eq.${user.id},to_id.eq.${id}),and(from_id.eq.${id},to_id.eq.${user.id})`)
+          .order("id", { ascending: false }).limit(30);
+        fail(r.error);
+        return (r.data || []).reverse().map(m => ({ id: m.id, mine: m.from_id === user.id, body: m.body }));
+      },
+
+      async send(id, body) { fail((await sb.from("messages").insert({ from_id: user.id, to_id: id, body })).error); },
+
+      async stop() {
+        const p = presence, i = inbox, a = authSub;
+        presence = inbox = authSub = user = null; profiles = [];
+        try {
+          if (a) a.unsubscribe();
+          if (p) await sb.removeChannel(p);
+          if (i) await sb.removeChannel(i);
+          await sb.auth.signOut();
+        } catch (e) {}
       }
-    },
+    };
+  })();
 
-    async signIn(email, pw) {
-      await client();
-      const r = await sb.auth.signInWithPassword({ email, password: pw });
-      fail(r.error);
-      return toUser(r.data.user);
-    },
+  /* ---------- Offline demo (used while SUPABASE_URL / SUPABASE_ANON_KEY are empty) ---------- */
+  const DEMO = (() => {
+    const CT = [["Alex", "online", "Working on something cool"], ["Sam", "online", "listening to music"], ["Casey", "online", ""],
+                ["Jordan", "busy", "In a meeting"], ["Taylor", "away", "brb"], ["Morgan", "off", ""], ["Riley", "off", ""]]
+                .map(c => ({ id: c[0], name: c[0], status: c[1], msg: c[2] }));
+    const REPLY = ["Hey! This is a placeholder chat, so I can only give canned answers :)", "Real messaging isn't hooked up yet, but the window works!",
+      "Interesting... tell me more (this reply is pre-written).", "LOL :D", "brb, grabbing a snack (L)", "Did you see that new wallpaper? Bliss forever.",
+      "I'm just a placeholder contact, but I'm listening.", "Nice! (Y)", "Hmm, let me think about that... :S", "ttyl! (this is not a real person)"];
+    let E = null, timers = [];
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    /* Canned replies only go to a chat that is still open (quiet = true), never pop a new window. */
+    const later = (ms, fn) => timers.push(setTimeout(() => E && fn(), ms));
+    return {
+      demo: true,
+      async restore() { return null; },
+      async signIn(email) { await wait(900); return { id: "owner", name: XP.settings.userName, email: email || "owner@hotmail.com" }; },
+      async signUp(email, pw, name) { await wait(900); return { id: "owner", name: name || XP.settings.userName, email: email || "owner@hotmail.com" }; },
+      async start(u, emit) { E = emit; emit.contacts(CT.map(c => Object.assign({}, c))); },
+      setStatus() {},
+      async history() { return []; },
+      async send(id) {
+        const c = CT.find(x => x.id === id);
+        if (c && c.status !== "off") later(1600 + Math.random() * 1400, () => E.message({ from: id, body: REPLY[Math.random() * REPLY.length | 0] }, true));
+      },
+      greet(id) { later(900, () => E.message({ from: id, body: "Hi " + XP.settings.userName + "! " + REPLY[0] }, true)); },
+      async stop() { E = null; timers.forEach(clearTimeout); timers = []; }
+    };
+  })();
 
-    async signUp(email, pw, name) {
-      await client();
-      const r = await sb.auth.signUp({
-        email,
-        password: pw,
-        options: { data: { display_name: name } },
-      });
-      fail(r.error);
-      if (!r.data.session) {
-        throw new Error("Account created. Check your e-mail to confirm it, then sign in.");
-      }
-      return toUser(r.data.user);
-    },
+  const B = LIVE ? SB : DEMO;
 
-    async start(u, emit) {
-      await client();
-      user = u;
-      tried = {};
-      me = { status: "online" };
-      fail((await sb.from("profiles").upsert({ id: u.id, display_name: u.name })).error);
-      await loadProfiles();
+  /* ---------------------------------------------------------------------------------------------
+   * MESSENGER UI
+   * ------------------------------------------------------------------------------------------- */
+  const MS = (() => {
+    const E = s => XP.esc(s).replace(/"/g, "&quot;"),
+          Q = (e, s) => e.querySelector(s),
+          ST = { online: ["Online", 0], busy: ["Busy", 1], brb: ["Be Right Back", 3], away: ["Away", 3], off: ["Appear Offline", 0] },
+          EM = { ":)": 0, ":-)": 0, ":D": 1, ":d": 1, ";)": 2, ";-)": 2, ":O": 3, ":o": 3, ":P": 4, ":p": 4, "(H)": 5, "(h)": 5, ":@": 6, ":$": 7, ":S": 8, ":s": 8, ":(": 9, ":-(": 9, ":'(": 10, ":|": 11, "(6)": 12, "(A)": 13, "(a)": 13, "(L)": 14, "(l)": 14, "(U)": 15, "(u)": 15, "(*)": 20, "(E)": 22, "(e)": 22, "(F)": 24, "(f)": 24, "(K)": 27, "(k)": 27, "(G)": 28, "(g)": 28, "(^)": 29, "(Y)": 40, "(y)": 40, "(N)": 41, "(n)": 41, "(R)": 46, "(r)": 46 },
+          ER = new RegExp(Object.keys(EM).map(k => k.replace(/[()*^$|]/g, "\\$&")).join("|"), "g"),
+          fmt = t => E(t).replace(ER, m => `<i class="em" style="background-position:-${EM[m] * 19}px 0"></i>`),
+          now = () => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+          ico = s => `<i class="st${s === "off" ? " off" : ""}" style="background-position:-${ST[s][1] * 16}px 0"></i>`,
+          menu = a => `<div class="mb">${a.map(x => `<span>${x}</span>`).join("")}</div>`;
 
-      /* Presence: who has Messenger open right now, and with what status. */
-      const push = () => {
-        const st = presence.presenceState();
-        const unknown = Object.keys(st).find(
-          (k) => k !== u.id && !tried[k] && !profiles.some((p) => p.id === k)
-        );
-        if (unknown) {
-          tried[unknown] = 1;
-          loadProfiles().then(push);
-          return;
-        } // someone just signed up
-        emit.contacts(
-          profiles.map((p) => {
-            const m = st[p.id] && st[p.id][0],
-              on = m && m.status !== "off";
-            return {
-              id: p.id,
-              name: p.display_name,
-              status: on ? m.status : "off",
-              msg: "",
-            };
-          })
-        );
+    /* Shared state. It lives outside any one window so chats keep working if the buddy list is closed. */
+    let me = null, mine = "online", contacts = [], busy = false;
+    const views = new Set();        // one repaint function per open Messenger / chat window
+    const chats = new Map();        // contact id -> function(message) that prints an incoming message
+    const NAME = () => (me ? me.name : XP.settings.userName);
+
+    /* Presence can fire many times a second: repaint at most once per frame. */
+    let queued = false;
+    const refresh = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; views.forEach(f => f()); }); } };
+
+    const signOut = () => {
+      if (!me) return;
+      B.stop();
+      me = null; contacts = []; mine = "online";
+      XP.windows.list().filter(w => w.key === "chat").forEach(w => w.close());   // like the real thing: conversations end
+      chats.clear();
+      views.forEach(f => f());
+    };
+
+    const emit = {
+      contacts(list) { if (me) { contacts = list; refresh(); } },
+      message(m, quiet) {
+        const print = chats.get(m.from);
+        if (print) print(m);
+        else if (!quiet) chatWith(m.from, B.demo ? [m] : []);   // live mode: the history query already contains it
+      },
+      signedOut: signOut
+    };
+
+    /* Windows "Log Off" (login.js) also signs Messenger out. */
+    document.addEventListener("xp:logoff", signOut);
+
+    const html = k => k === "chat"
+      ? menu(["File", "Edit", "Actions", "Tools", "Help"]) + `<div class="ch"><div class="ch-to">To: <b></b></div><div class="ch-bd"><div class="ch-l"><div class="ch-tx"></div><div class="ch-em">${[0, 1, 2, 3, 4, 9, 14, 40].map(i => `<i data-i="${i}" class="em" style="background-position:-${i * 19}px 0"></i>`).join("")}</div><div class="ch-in"><textarea spellcheck="false" maxlength="2000"></textarea><button class="msb">Send</button></div></div><div class="ch-r"><img class="cp" src="system/msn/buddy.png" alt=""><img src="system/msn/owner.png" alt=""></div></div><div class="ch-st"></div></div>`
+      : menu(["File", "Contacts", "Actions", "Tools", "Help"]) + `<div class="ms"><div class="ms-in"><img src="system/msn/logo.png" alt=""><h3>.NET Messenger Service</h3>`
+        + `<label class="ms-nm" hidden>Display name:<input type="text" maxlength="24" spellcheck="false"></label>`
+        + `<label>E-mail address:<input class="ms-em" type="text" value="${B.demo ? "owner@hotmail.com" : E(XP.storage.get(MAIL, ""))}" spellcheck="false"></label>`
+        + `<label>Password:<input class="ms-pw" type="password" value="${B.demo ? "********" : ""}"></label>`
+        + `<label class="chk"><input class="ms-auto" type="checkbox" ${XP.storage.get(AUTO, true) ? "checked" : ""}>Sign me in automatically</label>`
+        + `<button class="msb">Sign In</button>`
+        + `<div class="ms-err"></div>`
+        + `<a class="ms-new" ${B.demo ? "hidden" : ""}>Get a new account</a>`
+        + `</div><div class="ms-hd" hidden><img src="system/msn/owner.png" alt=""><div><b></b><small class="em"></small><br><select>${Object.entries(ST).map(([v, s]) => `<option value="${v}">${s[0]}</option>`).join("")}<option value="out">Sign Out</option></select></div></div><div class="ms-ls" hidden></div><div class="ms-ft" hidden><span></span><span>MSN Messenger</span></div></div>`;
+
+    /* ---------- the buddy-list window ---------- */
+    function main(w) {
+      const el = w.el, $ = s => Q(el, s), inV = $(".ms-in"), hd = $(".ms-hd"), ls = $(".ms-ls"), ft = $(".ms-ft"),
+            sel = $(".ms-hd select"), btn = $(".ms-in .msb"), err = $(".ms-err"), nmRow = $(".ms-nm"), pw = $(".ms-pw");
+      let mode = "in", selId = null;
+
+      /* One function draws whichever side applies: the sign-in form, or the buddy list. */
+      const paint = () => {
+        const on = !!me;
+        inV.hidden = on; hd.hidden = ft.hidden = ls.hidden = !on;
+        if (!on) { ls.innerHTML = ""; return; }          // don't leave the last account's contacts in the page
+        const online = contacts.filter(c => c.status !== "off"), offline = contacts.filter(c => c.status === "off"),
+              row = c => `<div class="ct${c.status === "off" ? " off" : ""}${c.id === selId ? " sel" : ""}" data-n="${E(c.id)}">${ico(c.status)}<span>${E(c.name)}</span><small>${c.msg ? "- " + E(c.msg) : ""}</small></div>`;
+        ls.innerHTML = `<h5>Online (${online.length})</h5>${online.map(row).join("")}<h5>Not Online (${offline.length})</h5>${offline.map(row).join("")}`;
+        ft.firstChild.textContent = online.length + " contacts online";
+        $(".ms-hd b").innerHTML = `${E(NAME())} <small>(${ST[mine][0]})</small>`;
+        $(".ms-hd .em").textContent = me.email;
+        if (sel.value !== mine) sel.value = mine;
+      };
+      views.add(paint); w.view = paint;
+
+      const say = (text, ok) => { err.textContent = text || ""; err.classList.toggle("ok", !!ok); };
+      const setMode = m => {
+        mode = m; nmRow.hidden = m !== "up"; say("");
+        btn.textContent = m === "up" ? "Sign Up" : "Sign In";
+        $(".ms-new").textContent = m === "up" ? "I already have an account" : "Get a new account";
+      };
+      $(".ms-new").onclick = () => setMode(mode === "up" ? "in" : "up");
+
+      const login = async fn => {
+        if (busy) return;
+        busy = true; btn.disabled = true; say("");
+        btn.textContent = mode === "up" ? "Signing up..." : "Signing in...";
+        try {
+          const u = await fn();
+          me = u;
+          await B.start(u, emit);
+          B.setStatus(mine);
+          XP.storage.set(AUTO, $(".ms-auto").checked);
+          if (!B.demo) XP.storage.set(MAIL, u.email);
+          pw.value = B.demo ? "********" : "";
+          views.forEach(f => f());
+        } catch (e) {
+          me = null;
+          if (e && e.info) { setMode("in"); say(e.message, true); } else say((e && e.message) || String(e));
+        }
+        busy = false; btn.disabled = false; btn.textContent = mode === "up" ? "Sign Up" : "Sign In";
       };
 
-      presence = sb.channel("xp-messenger", { config: { presence: { key: u.id } } });
-      presence
-        .on("presence", { event: "sync" }, push)
-        .subscribe((s) => {
-          if (s === "SUBSCRIBED") presence.track(me);
-        });
-      push();
+      btn.onclick = () => {
+        const email = $(".ms-em").value.trim(), pass = pw.value, name = $(".ms-nm input").value.trim();
+        if (!B.demo && (!email || !pass)) return say("Type your e-mail address and password.");
+        if (mode === "up" && !B.demo && !name) return say("Type a display name.");
+        login(() => (mode === "up" ? B.signUp(email, pass, name) : B.signIn(email, pass)));
+      };
+      inV.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.type !== "checkbox") btn.click(); });
 
-      /* New messages addressed to me, pushed live. */
-      inbox = sb
-        .channel("xp-inbox-" + u.id)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: "to_id=eq." + u.id },
-          (p) => emit.message({ from: p.new.from_id, body: p.new.body, at: p.new.created_at })
-        )
-        .subscribe();
-    },
+      sel.onchange = () => {
+        if (sel.value === "out") return signOut();
+        mine = sel.value; B.setStatus(mine); paint();
+      };
 
-    setStatus(s) {
-      me = { status: s };
-      if (presence) presence.track(me);
-    },
-
-    async history(id) {
-      const r = await sb
-        .from("messages")
-        .select("from_id,body,created_at")
-        .or(`and(from_id.eq.${user.id},to_id.eq.${id}),and(from_id.eq.${id},to_id.eq.${user.id})`)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      fail(r.error);
-      return (r.data || [])
-        .reverse()
-        .map((m) => ({ mine: m.from_id === user.id, body: m.body, at: m.created_at }));
-    },
-
-    async send(id, body) {
-      fail((await sb.from("messages").insert({ from_id: user.id, to_id: id, body })).error);
-    },
-
-    async stop() {
-      try {
-        if (presence) await sb.removeChannel(presence);
-        if (inbox) await sb.removeChannel(inbox);
-        await sb.auth.signOut();
-      } catch (e) {}
-      presence = inbox = user = null;
-      profiles = [];
-    },
-  };
-})();
-
-/* ---------- Offline demo (used while SUPABASE_URL / SUPABASE_ANON_KEY are empty) ---------- */
-const DEMO = (() => {
-  const CT = [
-    ["Alex", "online", "Working on something cool"],
-    ["Sam", "online", "listening to music"],
-    ["Casey", "online", ""],
-    ["Jordan", "busy", "In a meeting"],
-    ["Taylor", "away", "brb"],
-    ["Morgan", "off", ""],
-    ["Riley", "off", ""],
-  ].map((c) => ({ id: c[0], name: c[0], status: c[1], msg: c[2] }));
-
-  const REPLY = [
-    "Hey! This is a placeholder chat, so I can only give canned answers :)",
-    "Real messaging isn't hooked up yet, but the window works!",
-    "Interesting... tell me more (this reply is pre-written).",
-    "LOL :D",
-    "brb, grabbing a snack (L)",
-    "Did you see that new wallpaper? Bliss forever.",
-    "I'm just a placeholder contact, but I'm listening.",
-    "Nice! (Y)",
-    "Hmm, let me think about that... :S",
-    "ttyl! (this is not a real person)",
-  ];
-
-  let E = null;
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
-  return {
-    demo: true,
-    REPLY,
-    async restore() {
-      return null;
-    },
-    async signIn(email) {
-      await wait(900);
-      return { id: "owner", name: XP.settings.userName, email: email || "owner@hotmail.com" };
-    },
-    async signUp(email, pw, name) {
-      await wait(900);
-      return { id: "owner", name: name || XP.settings.userName, email: email || "owner@hotmail.com" };
-    },
-    async start(u, emit) {
-      E = emit;
-      emit.contacts(CT.map((c) => Object.assign({}, c)));
-    },
-    setStatus() {},
-    async history() {
-      return [];
-    },
-    async send(id) {
-      const c = CT.find((x) => x.id === id);
-      if (c && c.status !== "off") {
-        setTimeout(
-          () => E && E.message({ from: id, body: REPLY[(Math.random() * REPLY.length) | 0] }),
-          1600 + Math.random() * 1400
-        );
-      }
-    },
-    greet(id) {
-      setTimeout(
-        () => E && E.message({ from: id, body: "Hi " + XP.settings.userName + "! " + REPLY[0] }),
-        900
-      );
-    },
-    async stop() {
-      E = null;
-    },
-  };
-})();
-
-const B = LIVE ? SB : DEMO;
-
-/* ---------------------------------------------------------------------------------------------
- * MESSENGER UI
- * ------------------------------------------------------------------------------------------- */
-const MS = (() => {
-  const E = (s) =>
-      String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;"),
-    Q = (e, s) => e.querySelector(s),
-    ST = {
-      online: ["Online", 0],
-      busy: ["Busy", 1],
-      brb: ["Be Right Back", 3],
-      away: ["Away", 3],
-      off: ["Appear Offline", 0],
-    },
-    EM = {
-      ":)": 0,
-      ":-)": 0,
-      ":D": 1,
-      ":d": 1,
-      ";)": 2,
-      ";-)": 2,
-      ":O": 3,
-      ":o": 3,
-      ":P": 4,
-      ":p": 4,
-      "(H)": 5,
-      "(h)": 5,
-      ":@": 6,
-      ":$": 7,
-      ":S": 8,
-      ":s": 8,
-      ":(": 9,
-      ":-(": 9,
-      ":'(": 10,
-      ":|": 11,
-      "(6)": 12,
-      "(A)": 13,
-      "(a)": 13,
-      "(L)": 14,
-      "(l)": 14,
-      "(U)": 15,
-      "(u)": 15,
-      "(*)": 20,
-      "(E)": 22,
-      "(e)": 22,
-      "(F)": 24,
-      "(f)": 24,
-      "(K)": 27,
-      "(k)": 27,
-      "(G)": 28,
-      "(g)": 28,
-      "(^)": 29,
-      "(Y)": 40,
-      "(y)": 40,
-      "(N)": 41,
-      "(n)": 41,
-      "(R)": 46,
-      "(r)": 46,
-    },
-    ER = new RegExp(
-      Object.keys(EM)
-        .map((k) => k.replace(/[()*^$|]/g, "\\$&"))
-        .join("|"),
-      "g"
-    ),
-    fmt = (t) =>
-      E(t).replace(
-        ER,
-        (m) => `<i class="em" style="background-position:-${EM[m] * 19}px 0"></i>`
-      ),
-    now = () =>
-      new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-    ico = (s) =>
-      `<i class="st${s === "off" ? " off" : ""}" style="background-position:-${
-        ST[s][1] * 16
-      }px 0"></i>`,
-    menu = (a) =>
-      `<div class="mb">${a.map((x) => `<span>${x}</span>`).join("")}</div>`;
-
-  /* Shared state */
-  let me = null,
-    mine = "online",
-    contacts = [];
-  const lists = new Set(); // repaint callbacks, one per open buddy-list window
-  const chats = new Map(); // contact id -> function(body) that prints an incoming message
-  const NAME = () => (me ? me.name : XP.settings.userName);
-  const signed = () => !!me;
-
-  const emit = {
-    contacts(list) {
-      contacts = list;
-      lists.forEach((f) => f());
-    },
-    message(m) {
-      const open = chats.get(m.from);
-      if (open) open(m.body);
-      else chatWith(m.from, B.demo ? [m] : []);
-    },
-  };
-
-  const html = (k) =>
-    k === "chat"
-      ? menu(["File", "Edit", "Actions", "Tools", "Help"]) +
-        `<div class="ch"><div class="ch-to">To: <b></b></div><div class="ch-bd"><div class="ch-l"><div class="ch-tx"></div><div class="ch-em">${[
-          0, 1, 2, 3, 4, 9, 14, 40,
-        ]
-          .map(
-            (i) =>
-              `<i data-i="${i}" class="em" style="background-position:-${
-                i * 19
-              }px 0"></i>`
-          )
-          .join(
-            ""
-          )}</div><div class="ch-in"><textarea spellcheck="false"></textarea><button class="msb">Send</button></div></div><div class="ch-r"><img class="cp" src="system/msn/buddy.png" alt=""><img src="system/msn/owner.png" alt=""></div></div><div class="ch-st"></div></div>`
-      : menu(["File", "Contacts", "Actions", "Tools", "Help"]) +
-        `<div class="ms"><div class="ms-in"><img src="system/msn/logo.png" alt=""><h3>.NET Messenger Service</h3>` +
-        `<label class="ms-nm" hidden>Display name:<input type="text" maxlength="24" spellcheck="false"></label>` +
-        `<label>E-mail address:<input class="ms-em" type="text" value="${
-          B.demo ? "owner@hotmail.com" : ""
-        }" spellcheck="false"></label>` +
-        `<label>Password:<input class="ms-pw" type="password" value="${
-          B.demo ? "********" : ""
-        }"></label>` +
-        `<label class="chk"><input type="checkbox" checked>Sign me in automatically</label>` +
-        `<button class="msb">Sign In</button>` +
-        `<div class="ms-err" style="color:#c00;text-align:center;min-height:14px"></div>` +
-        `<a class="ms-new" ${
-          B.demo ? "hidden" : ""
-        } style="color:#0033cc;text-decoration:underline;cursor:pointer">Get a new account</a>` +
-        `</div><div class="ms-hd" hidden><img src="system/msn/owner.png" alt=""><div><b></b><small class="em"></small><br><select>${Object.entries(
-          ST
-        )
-          .map(([v, s]) => `<option value="${v}">${s[0]}</option>`)
-          .join("")}<option value="out">Sign Out</option></select></div></div><div class="ms-ls" hidden></div><div class="ms-ft" hidden><span></span><span>MSN Messenger</span></div></div>`;
-
-  function main(w) {
-    const el = w.el,
-      $ = (s) => Q(el, s),
-      inV = $(".ms-in"),
-      hd = $(".ms-hd"),
-      ls = $(".ms-ls"),
-      ft = $(".ms-ft"),
-      sel = $(".ms-hd select"),
-      btn = $(".ms-in .msb"),
-      err = $(".ms-err"),
-      nmRow = $(".ms-nm");
-    let mode = "in";
-
-    const paint = () => {
-      const on = contacts.filter((c) => c.status !== "off"),
-        of = contacts.filter((c) => c.status === "off"),
-        row = (c) =>
-          `<div class="ct ${
-            c.status === "off" ? "off" : ""
-          }" data-n="${E(c.id)}">${ico(c.status)}<span>${E(
-            c.name
-          )}</span><small>${c.msg ? "- " + E(c.msg) : ""}</small></div>`;
-
-      ls.innerHTML = `<h5>Online (${on.length})</h5>${on
-        .map(row)
-        .join("")}<h5>Not Online (${of.length})</h5>${of.map(row).join("")}`;
-      ft.firstChild.textContent = on.length + " contacts online";
-      $(".ms-hd b").innerHTML = `${E(NAME())} <small>(${
-        ST[mine][0]
-      })</small>`;
-      $(".ms-hd .em").textContent = me ? me.email : "";
-    };
-
-    const show = (on) => {
-      inV.hidden = on;
-      hd.hidden = ft.hidden = ls.hidden = !on;
-      if (on) {
-        sel.value = mine;
-        paint();
-      }
-    };
-
-    lists.add(paint);
-    w.msPaint = paint;
-
-    const setMode = (m) => {
-      mode = m;
-      nmRow.hidden = m !== "up";
-      err.textContent = "";
-      btn.textContent = m === "up" ? "Sign Up" : "Sign In";
-      $(".ms-new").textContent =
-        m === "up" ? "I already have an account" : "Get a new account";
-    };
-    $(".ms-new").onclick = () => setMode(mode === "up" ? "in" : "up");
-
-    const login = async (fn) => {
-      btn.disabled = true;
-      err.textContent = "";
-      btn.textContent = mode === "up" ? "Signing up..." : "Signing in...";
-      try {
-        me = await fn();
-        await B.start(me, emit);
-        B.setStatus(mine);
-        show(true);
-        $(".ms-pw").value = B.demo ? "********" : "";
-      } catch (e) {
-        me = null;
-        err.textContent = (e && e.message) || String(e);
-      }
-      btn.disabled = false;
-      btn.textContent = mode === "up" ? "Sign Up" : "Sign In";
-    };
-
-    btn.onclick = () => {
-      const email = $(".ms-em").value.trim(),
-        pw = $(".ms-pw").value,
-        name = $(".ms-nm input").value.trim();
-      if (!B.demo && (!email || !pw)) {
-        err.textContent = "Type your e-mail address and password.";
-        return;
-      }
-      if (mode === "up" && !B.demo && !name) {
-        err.textContent = "Type a display name.";
-        return;
-      }
-      login(() => (mode === "up" ? B.signUp(email, pw, name) : B.signIn(email, pw)));
-    };
-
-    /* Sign out logic */
-    const signOut = () => {
-      B.stop();
-      me = null;
-      contacts = [];
-      mine = "online";
-      chats.clear();
-      show(false);
-    };
-
-    /* Status dropdown */
-    sel.onchange = () => {
-      if (sel.value === "out") return signOut();
-      mine = sel.value;
-      B.setStatus(mine);
-      paint();
-    };
-
-    /* File menu */
-    el.querySelectorAll(".mb span").forEach((sp) =>
-      sp.addEventListener("click", (e) => {
+      /* File menu: Sign Out / Close */
+      el.querySelectorAll(".mb span").forEach(sp => sp.addEventListener("click", e => {
         if (sp.textContent.trim() !== "File") return;
         e.stopPropagation();
         XP.contextMenu.showAt(sp, [
-          { label: "Sign Out", disabled: !signed(), action: signOut },
+          { label: "Sign Out", disabled: !me, action: signOut },
           "-",
-          { label: "Close", action: () => w.close() },
+          { label: "Close", action: () => w.close() }
         ]);
-      })
-    );
+      }));
 
-    ls.onclick = (e) => {
-      const c = e.target.closest(".ct");
-      if (!c) return;
-      ls.querySelectorAll(".ct.sel").forEach((x) => x.classList.remove("sel"));
-      c.classList.add("sel");
-    };
+      ls.onclick = e => {
+        const c = e.target.closest(".ct"); if (!c) return;
+        selId = c.dataset.n;
+        ls.querySelectorAll(".ct.sel").forEach(x => x.classList.remove("sel"));
+        c.classList.add("sel");
+      };
+      ls.ondblclick = e => { const c = e.target.closest(".ct"); if (c) chatWith(c.dataset.n); };
 
-    ls.ondblclick = (e) => {
-      const c = e.target.closest(".ct");
-      if (c) chatWith(c.dataset.n);
-    };
-
-    if (signed()) {
-      show(true);
-    } else {
-      B.restore().then((u) => {
-        if (u && !signed()) login(async () => u);
-      });
+      paint();
+      /* Page reload: reuse the saved Supabase session (if "Sign me in automatically" was on). */
+      if (!me && XP.storage.get(AUTO, true)) B.restore().then(u => { if (u && !me) login(async () => u); });
     }
-  }
 
-  function chatWith(id, pending) {
-    const ex = XP.windows.find((w) => w.chat === id);
-    if (ex) {
-      if (ex.min) XP.windows.restore(ex);
-      return XP.windows.focus(ex);
+    /* ---------- conversation windows ---------- */
+    function chatWith(id, pending) {
+      const ex = XP.windows.find(w => w.chat === id);
+      if (ex) { if (ex.min) XP.windows.restore(ex); return XP.windows.focus(ex); }
+      /* A message can arrive from someone who isn't in the list yet (just signed up): still open the chat. */
+      const c = contacts.find(x => x.id === id) || { id, name: "New contact", status: "online", msg: "" };
+      XP.open("chat", { title: c.name + " - Conversation", chat: id, c, pending: pending || [] });
     }
-    const c = contacts.find((x) => x.id === id);
-    if (!c) return;
-    XP.open("chat", {
-      title: c.name + " - Conversation",
-      chat: id,
-      c,
-      pending: pending || [],
-    });
-  }
 
-  function chat(w, o) {
-    const el = w.el,
-      id = o.chat,
-      tx = Q(el, ".ch-tx"),
-      ta = Q(el, "textarea"),
-      stt = Q(el, ".ch-st"),
-      cur = () => contacts.find((x) => x.id === id) || o.c;
+    function chat(w, o) {
+      const el = w.el, id = o.chat, tx = Q(el, ".ch-tx"), ta = Q(el, "textarea"), stt = Q(el, ".ch-st"),
+            cur = () => contacts.find(x => x.id === id) || o.c, seen = new Set();
+      w.chat = id;
 
-    w.chat = id;
-    Q(el, ".ch-to b").textContent = cur().name;
-    if (cur().status === "off") Q(el, ".cp").style.filter = "grayscale(1)";
+      /* Keep the header / grey-out in step with the contact's status. */
+      const upd = () => { const c = cur(); Q(el, ".ch-to b").textContent = c.name; Q(el, ".cp").style.filter = c.status === "off" ? "grayscale(1)" : ""; };
+      views.add(upd); w.view = upd; upd();
 
-    const add = (cls, who, t) => {
-      const p = document.createElement("p");
-      p.className = cls;
-      p.innerHTML = who
-        ? `<span class="who">${E(who)} says:</span><br>&nbsp;${fmt(t)}`
-        : E(t);
-      tx.appendChild(p);
-      tx.scrollTop = tx.scrollHeight;
-    };
+      const add = (cls, who, t) => {
+        const p = document.createElement("p");
+        p.className = cls;
+        p.innerHTML = who ? `<span class="who">${E(who)} says:</span><br>&nbsp;${fmt(t)}` : E(t);
+        tx.appendChild(p); tx.scrollTop = tx.scrollHeight;
+      };
+      /* Messages with an id are printed once, even if realtime and the history query both deliver them. */
+      const fresh = m => { if (m.id == null) return true; if (seen.has(m.id)) return false; seen.add(m.id); return true; };
 
-    const incoming = (body) => {
-      add("", cur().name, body);
-      stt.textContent = "Last message received at " + now() + ".";
-    };
-    chats.set(id, incoming);
+      const incoming = m => {
+        if (!fresh(m)) return;
+        add("", cur().name, m.body);
+        stt.textContent = "Last message received at " + now() + ".";
+        if (XP.windows.active() !== w || w.min) w.btn.classList.add("flash");   // blink in the taskbar until it is clicked
+      };
+      chats.set(id, incoming);
+      const unflash = () => w.btn.classList.remove("flash");
+      el.addEventListener("pointerdown", unflash, true);
+      w.btn.addEventListener("click", unflash);
 
-    const note =
-      cur().status === "off"
+      const note = cur().status === "off"
         ? `${cur().name} appears offline. Your messages will be waiting when they next open this chat.`
-        : B.demo
-        ? "Placeholder chat: replies are pre-written and nothing is sent anywhere."
-        : "";
-    if (note) add("sys", "", note);
+        : B.demo ? "Placeholder chat: replies are pre-written and nothing is sent anywhere." : "";
+      if (note) add("sys", "", note);
 
-    B.history(id)
-      .then((list) =>
-        list.forEach((m) =>
-          add(m.mine ? "me" : "", m.mine ? NAME() : cur().name, m.body)
-        )
-      )
-      .catch((e) =>
-        add(
-          "sys",
-          "",
-          "Could not load earlier messages: " + ((e && e.message) || e)
-        )
-      )
-      .then(() => (o.pending || []).forEach((m) => incoming(m.body)));
+      B.history(id)
+        .then(list => list.filter(fresh).forEach(m => add(m.mine ? "me" : "", m.mine ? NAME() : cur().name, m.body)))
+        .catch(e => add("sys", "", "Could not load earlier messages: " + ((e && e.message) || e)))
+        .then(() => (o.pending || []).forEach(incoming));
 
-    const send = () => {
-      const t = ta.value.trim();
-      if (!t) return;
-      ta.value = "";
-      add("me", NAME(), t);
-      B.send(id, t)
-        .then(() => {
-          stt.textContent = "Last message sent at " + now() + ".";
-        })
-        .catch((e) =>
-          add(
-            "sys",
-            "",
-            "Your message could not be sent: " + ((e && e.message) || e)
-          )
-        );
+      const send = () => {
+        const t = ta.value.trim(); if (!t) return;
+        ta.value = ""; add("me", NAME(), t);
+        B.send(id, t).then(() => { stt.textContent = "Last message sent at " + now() + "."; })
+                     .catch(e => add("sys", "", "Your message could not be sent: " + ((e && e.message) || e)));
+        if (B.demo && cur().status !== "off") setTimeout(() => { if (el.isConnected) stt.textContent = cur().name + " is typing a message."; }, 500);
+      };
+      Q(el, ".ch-in .msb").onclick = send;
+      ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
+      el.querySelectorAll(".ch-em i").forEach(i => i.onclick = () => { ta.value += Object.keys(EM).find(k => EM[k] == i.dataset.i); ta.focus(); });
 
-      if (B.demo && cur().status !== "off") {
-        setTimeout(() => {
-          stt.textContent = cur().name + " is typing a message.";
-        }, 500);
-      }
-    };
-
-    Q(el, ".ch-in .msb").onclick = send;
-    ta.onkeydown = (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        send();
-      }
-    };
-
-    el.querySelectorAll(".ch-em i").forEach(
-      (i) =>
-        (i.onclick = () => {
-          ta.value += Object.keys(EM).find((k) => EM[k] == i.dataset.i);
-          ta.focus();
-        })
-    );
-
-    if (B.demo && cur().status !== "off" && !(o.pending || []).length) {
-      B.greet(id);
+      if (B.demo && cur().status !== "off" && !(o.pending || []).length) B.greet(id);
+      setTimeout(() => ta.focus(), 50);
     }
-    setTimeout(() => ta.focus(), 50);
-  }
 
-  return { html, main, chat, chatWith, lists, chats };
+    const closed = w => { views.delete(w.view); if (w.chat != null) chats.delete(w.chat); };
+    return { html, main, chat, closed };
+  })();
+
+  XP.apps.register({
+    id: "msg",
+    title: "Windows Messenger",
+    icon: "msg",
+    size: { w: 252, h: 460 },
+    css: ["css/apps/messenger.css"],
+    content: () => MS.html("msg"),
+    onOpen: w => MS.main(w),
+    onClose: MS.closed
+  });
+
+  /* One window per conversation; opened by double-clicking a contact. Not shown on the desktop. */
+  XP.apps.register({
+    id: "chat",
+    title: o => o.title,
+    icon: "msg",
+    multi: true,
+    size: { w: 500, h: 390 },
+    css: ["css/apps/messenger.css"],
+    content: () => MS.html("chat"),
+    onOpen: (w, o) => MS.chat(w, o),
+    onClose: MS.closed
+  });
 })();
-
-XP.apps.register({
-  id: "msg",
-  title: "Windows Messenger",
-  icon: "msg",
-  size: { w: 252, h: 460 },
-  css: ["css/apps/messenger.css"],
-  content: () => MS.html("msg"),
-  onOpen: (w) => MS.main(w),
-  onClose: (w) => {
-    if (w.msPaint) MS.lists.delete(w.msPaint);
-  },
-});
-
-XP.apps.register({
-  id: "chat",
-  title: (o) => o.title,
-  icon: "msg",
-  multi: true,
-  size: { w: 500, h: 390 },
-  css: ["css/apps/messenger.css"],
-  content: () => MS.html("chat"),
-  onOpen: (w, o) => MS.chat(w, o),
-  onClose: (w) => MS.chats.delete(w.chat),
-});
