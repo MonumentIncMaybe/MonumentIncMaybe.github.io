@@ -61,7 +61,9 @@
   /* Back / Forward / history / loading status for one IE window. */
   function ieFrame(w, el, inp) {
     const fr = el.querySelector(".pg iframe"),
-          tb = [...el.querySelectorAll(".tbar .tbn")],
+          K = k => el.querySelector('.tbar [data-k="' + k + '"]'),
+          bBack = K("back"), bFwd = K("fwd"), bStop = K("stop"), bRef = K("refresh"), bHome = K("home"),
+          bFav = K("favorites"), bMail = K("mail"), bMsg = K("messenger"),
           st = el.querySelector(".sbar span"),
           h = [],
           o = { i: -1 };
@@ -99,10 +101,10 @@
       }
       st.textContent = "Opening page...";
       const bd = o.i <= 0, fd = o.i >= h.length - 1;
-      tb[0].className = "tbn" + (bd ? " dis" : "");
-      tb[0].innerHTML = (bd ? BACKD : BACK) + "<span>Back</span>";
-      tb[2].className = "tbn" + (fd ? " dis" : "");
-      tb[2].innerHTML = fd ? FWDD : FWD;
+      bBack.className = "tbn" + (bd ? " dis" : "");
+      bBack.innerHTML = (bd ? BACKD : BACK) + "<span>Back</span>";
+      bFwd.className = "tbn" + (fd ? " dis" : "");
+      bFwd.innerHTML = fd ? FWDD : FWD;
     };
 
     const go = (u, add = !0) => {
@@ -131,13 +133,13 @@
       if (e.source === fr.contentWindow && e.data && e.data.go) go(e.data.go);
     });
 
-    tb[0].onclick = () => { if (o.i > 0) { o.i--; show(); } };
-    tb[2].onclick = () => { if (o.i < h.length - 1) { o.i++; show(); } };
-    tb[3].onclick = () => { try { fr.contentWindow.stop(); } catch (e) {} st.textContent = "Done"; };
-    tb[4].onclick = show;
-    tb[5].onclick = () => go("about:home");
-    tb[8].onclick = () => XP.open && XP.open("mail");
-    tb[9].onclick = () => XP.open && XP.open("msg");
+    bBack.onclick = () => { if (o.i > 0) { o.i--; show(); } };
+    bFwd.onclick = () => { if (o.i < h.length - 1) { o.i++; show(); } };
+    bStop.onclick = () => { try { fr.contentWindow.stop(); } catch (e) {} st.textContent = "Done"; };
+    bRef.onclick = show;
+    bHome.onclick = () => go("about:home");
+    bMail.onclick = () => XP.open && XP.open("mail");
+    bMsg.onclick = () => XP.open && XP.open("msg");
 
     /* ---------- Favorites: sidebar, menu, add / rename dialog, organize ---------- */
     const pg = el.querySelector(".pg"),
@@ -215,7 +217,7 @@
     w.ieCleanup = () => document.removeEventListener("xp:ie-favorites", onFavs);
 
     /* toolbar "Favorites" button toggles the sidebar */
-    if (tb[7]) tb[7].onclick = toggleSidebar;
+    if (bFav) bFav.onclick = toggleSidebar;
 
     /* menu bar: File / Edit / View / Favorites / Tools / Help */
     const favMenu = () => {
@@ -237,9 +239,9 @@
       View: () => [
         { label: "Explorer Bar", items: [{ label: "Favorites", key: "Ctrl+I", checked: pg.classList.contains("side"), action: toggleSidebar }, { label: "Search", disabled: true }] },
         "-",
-        { label: "Stop", action: () => tb[3].onclick() },
+        { label: "Stop", action: () => bStop.onclick() },
         { label: "Refresh", key: "F5", action: show },
-        { label: "Go To", items: [{ label: "Back", disabled: o.i <= 0, action: () => tb[0].onclick() }, { label: "Forward", disabled: o.i >= h.length - 1, action: () => tb[2].onclick() }, { label: "Home Page", action: () => go("about:home") }] }
+        { label: "Go To", items: [{ label: "Back", disabled: o.i <= 0, action: () => bBack.onclick() }, { label: "Forward", disabled: o.i >= h.length - 1, action: () => bFwd.onclick() }, { label: "Home Page", action: () => go("about:home") }] }
       ],
       Favorites: favMenu,
       Tools: () => [{ label: "Internet Options...", disabled: true }],
@@ -259,10 +261,63 @@
     go(startUrl(w.key));
   }
 
+  /* Extra toolbar icons (the shared set in XP.ui has no Print / Edit / History). */
+  const PRINT = XP.ui.svg(0, '<rect x="6" y="2.5" width="10" height="6.5" fill="#fff" stroke="#7a7a7a"/><rect x="2.5" y="8.5" width="17" height="8" rx="1.5" fill="#c9ccd2" stroke="#5f626a"/><rect x="6" y="13" width="10" height="6.5" fill="#fff" stroke="#7a7a7a"/><path d="M8 15.5h6M8 17.5h6" stroke="#9aa0aa"/>'),
+        EDIT  = XP.ui.svg(0, '<rect x="3.5" y="2.5" width="12" height="16" fill="#fff" stroke="#6b6e76"/><path d="M6 6.5h7M6 9h7M6 11.5h4" stroke="#8fa3c8"/><path d="M10 17l7-9 2.5 2-7 9-3 .8z" fill="#f2c94c" stroke="#8a6d1f"/>'),
+        HIST  = XP.ui.svg(0, '<circle cx="12" cy="10" r="7.5" fill="#fff" stroke="#3b6fd0" stroke-width="1.5"/><path d="M12 5.5V10l3.2 2" stroke="#222" stroke-width="1.5" fill="none"/><path d="M1.5 13l3.2-3.8v2.4H8v2.8H4.7v2.4z" fill="#3aa83a"/>'),
+        DD    = '<svg viewBox="0 0 8 8"><path d="M1 2.5h6L4 6z" fill="#000"/></svg>';
+
+  /* One toolbar button; data-k lets the code above find it without counting positions. */
+  const tbk = (k, t, i, c = "") => `<div class="tbn ${c}" data-k="${k}">${i}${t ? `<span>${t}</span>` : ""}</div>`;
+  const dd = (k, c = "") => `<div class="tbn dd ${c}" data-k="${k}">${DD}</div>`;
+
+  /* Internet Explorer 6 look (scoped to .ie-win so My Computer / other explorer windows are untouched). */
+  const IE_CSS = `
+.ie-win .mb { height: 22px; padding: 0 2px; border-bottom: 1px solid #fff; box-shadow: 0 1px 0 #d6d2c2; }
+.ie-win .mb span { padding: 3px 6px; }
+.ie-win .mb img { height: 20px; margin: 1px 2px 0 auto; }
+
+.ie-win .tbar { height: 38px; padding: 0 2px 0 3px; gap: 0; background: var(--xp-window-bg, #ece9d8); border-bottom: 1px solid #aca899; box-shadow: 0 1px 0 #fff; }
+.ie-win .tbar::before, .ie-win .abar::before { content: ""; flex: none; width: 3px; height: 28px; margin: 0 5px 0 2px; border-left: 1px solid #fff; border-right: 1px solid #aca899; }
+.ie-win .tbn { height: 34px; padding: 2px 4px; gap: 4px; border-radius: 3px; }
+.ie-win .tbn:hover { border-color: #aca899; background: linear-gradient(#fff, #e8e5d6); }
+.ie-win .tbn:active { background: #dedbc9; }
+.ie-win .tbn.dis:hover { border-color: transparent; background: none; }
+.ie-win .tbn.dd { width: 11px; padding: 0; margin-left: -3px; justify-content: center; }
+.ie-win .tbn.dd svg { width: 7px; height: 7px; }
+.ie-win .tbn.dd.dis svg path { fill: #a3a395; }
+.ie-win .tsep { height: 30px; margin: 0 4px; border-left: 1px solid #aca899; border-right: 1px solid #fff; background: none; width: 0; }
+
+.ie-win .abar { height: 28px; padding: 0 4px 0 3px; gap: 4px; color: #6d6d65; border-bottom: 1px solid #aca899; box-shadow: 0 1px 0 #fff; }
+.ie-win .abar::before { height: 22px; margin-right: 2px; }
+.ie-win .abar .inp { height: 21px; padding: 0 0 0 3px; border: 1px solid #7f9db9; }
+.ie-win .abar .inp .ddb { flex: none; width: 17px; height: 17px; margin-right: 1px; border-radius: 2px; background: linear-gradient(#cfdcf8, #a9c0f0 55%, #bcd0f6); border: 1px solid #8aa5d8; position: relative; }
+.ie-win .abar .inp .ddb::after { content: ""; position: absolute; left: 4px; top: 6px; border: 3.5px solid transparent; border-top: 4px solid #4d6185; }
+.ie-win .go { gap: 4px; padding: 0 3px; }
+.ie-win .go i { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #1d7d18; background: linear-gradient(#7edc6e, #2f9f26 60%, #46b83b); }
+.ie-win .go i::after { left: 5px; top: 4px; }
+.ie-win .lk { color: #000; padding: 0 2px 0 8px; position: relative; white-space: nowrap; }
+.ie-win .lk::before { content: ""; position: absolute; left: 0; top: -6px; height: 22px; border-left: 1px solid #fff; border-right: 1px solid #aca899; width: 2px; }
+
+.ie-win .pg { border: 1px solid; border-color: #716f64 #fff #fff #716f64; }
+.ie-win .pg iframe { background: #fff; }
+
+.ie-win .sbar { height: 22px; padding: 1px 0 1px 2px; gap: 2px; border-top: 1px solid #aca899; }
+.ie-win .sbar > img { margin: 0 3px 0 2px; }
+.ie-win .sbar > span { flex: 1; height: 18px; line-height: 18px; padding: 0 4px; box-shadow: inset 1px 1px #aca899, inset -1px -1px #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ie-win .sbar .sp { width: 130px; height: 18px; margin-left: 0; padding-left: 6px; gap: 4px; border-left: 0; box-shadow: inset 1px 1px #aca899, inset -1px -1px #fff; }
+`;
+  const addIeCss = () => {
+    if (document.getElementById("ie-skin")) return;
+    const st = document.createElement("style");
+    st.id = "ie-skin"; st.textContent = IE_CSS;
+    document.head.appendChild(st);
+  };
+
   /* Window body markup */
-  const view = k => XP.ui.menubar() + 
-    `<div class="tbar">${T("Back",BACKD,"dis")}${T("",'<svg viewBox="0 0 8 8" style="width:8px"><path d="M1 2h6L4 6z" fill="#777"/></svg>',"dis")}${T("",FWDD,"dis")}${T("",STOP,"sm")}${T("",REF,"sm")}${T("",HOME,"sm")}<div class="tsep"></div>${T("Search",`<img src="${IC("search")}">`)}${T("Favorites",`<img src="${IC("fav")}">`)}<div class="tsep"></div>${T("",`<img src="${IC("mail")}">`,"sm")}${T("",`<img src="${IC("msg")}">`,"sm")}</div>` +
-    `<div class="abar">Address<div class="inp"><img src="${IC("ie")}"><input value="${k==="msn"?"http://www.msn.com/":"about:home"}" spellcheck="false"></div><span class="go"><i></i>Go</span><span>Links»</span></div>` +
+  const view = k => XP.ui.menubar().replace("tour.png", "xpflag.png") +
+    `<div class="tbar">${tbk("back", "Back", BACKD, "dis")}${dd("backdd", "dis")}${tbk("fwd", "", FWDD, "dis")}${dd("fwddd", "dis")}<div class="tsep"></div>${tbk("stop", "", STOP, "sm")}${tbk("refresh", "", REF, "sm")}${tbk("home", "", HOME, "sm")}<div class="tsep"></div>${tbk("search", "Search", `<img src="${IC("search")}">`)}${tbk("favorites", "Favorites", `<img src="${IC("fav")}">`)}${tbk("media", "", `<img src="${IC("wmp-real")}">`, "sm")}${tbk("history", "", HIST, "sm")}<div class="tsep"></div>${tbk("mail", "", `<img src="${IC("mail")}">`, "sm")}${dd("maildd")}${tbk("print", "", PRINT, "sm")}${tbk("edit", "", EDIT, "sm")}${tbk("messenger", "", `<img src="${IC("msg")}">`, "sm")}</div>` +
+    `<div class="abar">Address<div class="inp"><img src="${IC("ie")}"><input value="${k==="msn"?"http://www.msn.com/":"about:home"}" spellcheck="false"><i class="ddb"></i></div><span class="go"><i></i>Go</span><span class="lk">Links&nbsp;&raquo;</span></div>` +
     `<div class="pg">` +
       `<div class="ie-side"><div class="ie-sh"><span>Favorites</span><i title="Close">×</i></div>` +
         `<div class="ie-sb"><button class="xp-btn add">Add...</button><button class="xp-btn org">Organize...</button></div>` +
@@ -272,7 +327,7 @@
       `<iframe title="Internet Explorer" allow="fullscreen"></iframe>` +
       `<div class="ie-dlg-bg"></div>` +
     `</div>` +
-    `<div class="sbar"><img src="${IC("ie")}" width="16" height="16"><span>Done</span><div class="sp"><img src="${IC("ie")}" width="16" height="16"><span>Internet</span></div></div>`;
+    `<div class="sbar"><img src="${IC("ie")}" width="16" height="16"><span>Done</span><div class="sp"><img src="${IC("globe-16")}" width="16" height="16"><span>Internet</span></div></div>`;
 
   const common = {
     multi: true,
@@ -282,6 +337,8 @@
     content: w => view(w.key),
     onOpen(w) {
       const el = w.el, inp = el.querySelector(".abar input");
+      el.classList.add("ie-win");
+      addIeCss();
       const go = () => {
         const v = inp.value.trim();
         if (!v) return;
